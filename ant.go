@@ -6,13 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	prettyjson "github.com/hokaccha/go-prettyjson"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
 	WatchingMode    = true
-	ProfitThreshold = -0.1 / (1 - OceanFee) / (1 - ExinFee)
+	ProfitThreshold = 0.1 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee        = 0.002
 	ExinFee         = 0.001
 )
@@ -51,8 +50,6 @@ func (ant *Ant) Run() {
 	for {
 		select {
 		case e := <-ant.e:
-			v, _ := prettyjson.Marshal(e)
-			log.Info(Who(e.Base), Who(e.Quote), string(v))
 			if WatchingMode {
 				continue
 			}
@@ -108,6 +105,7 @@ func (ant *Ant) Low(ctx context.Context, depth Depth, base, quote string) error 
 		if bidAmount > maxAmount {
 			bidAmount = maxAmount
 		}
+		log.Infof("ocean bid price: %10.8v, exin price: %10.8v, profit: %5.2v, %v/%v", bidPrice, price, bidProfit, Who(base), Who(quote))
 		ant.e <- Event{
 			Category:   "L",
 			OceanPrice: bidPrice,
@@ -160,7 +158,7 @@ func (ant *Ant) High(ctx context.Context, depth Depth, base, quote string) error
 			if askAmount > maxAmount {
 				askAmount = maxAmount
 			}
-
+			log.Infof("ocean ask price: %10.8v, exin price: %10.8v, profit: %5.2v, %v/%v", askPrice, price, askProfit, Who(base), Who(quote))
 			ant.e <- Event{
 				Category:   "H",
 				OceanPrice: askPrice,
