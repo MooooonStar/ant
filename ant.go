@@ -10,7 +10,7 @@ import (
 
 const (
 	WatchingMode    = true
-	ProfitThreshold = -0.1 / (1 - OceanFee) / (1 - ExinFee)
+	ProfitThreshold = -0.5 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee        = 0.002
 	ExinFee         = 0.001
 )
@@ -81,6 +81,8 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 		if amount.GreaterThanOrEqual(otc.Amount) {
 			amount = otc.Amount
 		}
+		log.Infof("bid -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, bidProfit, Who(base), Who(quote))
+		log.Infof("amount: %10.8v, low: %10.8v, high: %10.8v", exchange.Amount, otc.Min, otc.Max)
 		ant.e <- Event{
 			Category: "L",
 			Price:    bidPrice,
@@ -106,6 +108,8 @@ func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote strin
 		if amount.GreaterThanOrEqual(otc.Amount) {
 			amount = otc.Amount
 		}
+		log.Infof("ask -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, askProfit, Who(base), Who(quote))
+		log.Infof("amount: %10.8v, low: %10.8v, high: %10.8v", exchange.Amount, otc.Min, otc.Max)
 		ant.e <- Event{
 			Category: "H",
 			Price:    askPrice,
