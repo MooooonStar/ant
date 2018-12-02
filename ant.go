@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/md5"
+	"io"
 	"time"
 
 	"github.com/hokaccha/go-prettyjson"
+	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -17,6 +20,7 @@ const (
 )
 
 type Event struct {
+	ID       string          `json:"-"`
 	Category string          `json:"category"`
 	Price    decimal.Decimal `json:"ocean_price"`
 	Profit   decimal.Decimal `json:"profit"`
@@ -27,6 +31,15 @@ type Event struct {
 
 type Ant struct {
 	e chan Event
+}
+
+func UuidWithString(str string) string {
+	h := md5.New()
+	io.WriteString(h, str)
+	sum := h.Sum(nil)
+	sum[6] = (sum[6] & 0x0f) | 0x30
+	sum[8] = (sum[8] & 0x3f) | 0x80
+	return uuid.FromBytesOrNil(sum).String()
 }
 
 func (ant *Ant) Run() {
@@ -42,12 +55,16 @@ func (ant *Ant) Run() {
 			price, _ := e.Price.Float64()
 			switch e.Category {
 			case "L":
-				if _, err := ExinTrade(amount*price, e.Quote, e.Base); err == nil {
-					OceanSell(price, amount, "L", e.Base, e.Quote)
+				trace := UuidWithString(e.ID + ExinCore)
+				if _, err := ExinTrade(amount*price, e.Quote, e.Base, trace); err == nil {
+					trace := UuidWithString(e.ID + OceanCore)
+					OceanSell(price, amount, "L", e.Base, e.Quote, trace)
 				}
 			case "H":
-				if _, err := OceanBuy(price, amount*price, "L", e.Base, e.Quote); err == nil {
-					ExinTrade(amount, e.Base, e.Quote)
+				trace := UuidWithString(e.ID + OceanCore)
+				if _, err := OceanBuy(price, amount*price, "L", e.Base, e.Quote, trace); err == nil {
+					trace := UuidWithString(e.ID + ExinCore)
+					ExinTrade(amount, e.Base, e.Quote, trace)
 				}
 			}
 		}
@@ -84,7 +101,9 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 		if amount.GreaterThanOrEqual(otc.Amount) {
 			amount = otc.Amount
 		}
+		id := UuidWithString(Who(base) + Who(quote) + bidPrice.String() + amount.String() + "L")
 		ant.e <- Event{
+			ID:       id,
 			Category: "L",
 			Price:    bidPrice,
 			Amount:   amount,
@@ -109,7 +128,9 @@ func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote strin
 		if amount.GreaterThanOrEqual(otc.Amount) {
 			amount = otc.Amount
 		}
+		id := UuidWithString(Who(base) + Who(quote) + askPrice.String() + amount.String() + "H")
 		ant.e <- Event{
+			ID:       id,
 			Category: "H",
 			Price:    askPrice,
 			Amount:   amount,

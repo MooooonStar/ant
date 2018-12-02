@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/shopspring/decimal"
+
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/stretchr/testify/assert"
 )
@@ -65,4 +67,33 @@ func TestOceanCancel(t *testing.T) {
 	//OceanCore = F1exCore
 	err := OceanCancel("51f73f1f-212e-48cd-b990-b5819716f8f7")
 	fmt.Println(err)
+}
+
+func TestUUIDl(t *testing.T) {
+	//OceanCore = F1exCore
+	e := Event{
+		Category: "L",
+		Base:     XIN,
+		Quote:    USDT,
+		Price:    decimal.NewFromFloat(550.0),
+		Amount:   decimal.NewFromFloat(0.01),
+	}
+	id := UuidWithString(Who(e.Base) + Who(e.Quote) + e.Price.String() + e.Amount.String() + "L")
+	fmt.Println(id)
+
+	e = Event{
+		Category: "L",
+		Base:     XIN,
+		Quote:    USDT,
+		Price:    decimal.NewFromFloat(550.0),
+		Amount:   decimal.NewFromFloat(0.011),
+	}
+	id = UuidWithString(Who(e.Base) + Who(e.Quote) + e.Price.String() + e.Amount.String() + "L")
+	fmt.Println(id)
+
+	id1 := UuidWithString(id + ExinCore)
+	fmt.Println(id1)
+
+	id2 := UuidWithString(id + OceanCore)
+	fmt.Println(id2)
 }

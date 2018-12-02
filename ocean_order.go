@@ -148,7 +148,7 @@ func OrderCheck(action OceanOrderAction, desireAmount, quote string) error {
 }
 
 //if the category is "M", the price should be zero.
-func OceanBuy(price, amount float64, category, base, quote string) (string, error) {
+func OceanBuy(price, amount float64, category, base, quote string, trace ...string) (string, error) {
 	log.Infof("++++++Buy %s at price %12.8f, amount %12.8f, type: %s ", base, price, amount, category)
 	order := OceanOrderAction{
 		S: "B",
@@ -161,19 +161,22 @@ func OceanBuy(price, amount float64, category, base, quote string) (string, erro
 		return "", err
 	}
 
-	trace := uuid.Must(uuid.NewV4())
+	traceId := uuid.Must(uuid.NewV4()).String()
+	if len(trace) == 1 {
+		traceId = trace[0]
+	}
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     quote,
 		RecipientId: OceanCore,
 		Amount:      number.FromFloat(amount).Round(Precision),
-		TraceId:     trace.String(),
+		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
-	return trace.String(), err
+	return traceId, err
 }
 
 //if the category is "M", the price should be zero.
-func OceanSell(price, amount float64, category, base, quote string) (string, error) {
+func OceanSell(price, amount float64, category, base, quote string, trace ...string) (string, error) {
 	log.Infof("-----Sell %s at price %12.8f, amount %12.8f, type: %s", quote, price, amount, category)
 	order := OceanOrderAction{
 		S: "A",
@@ -186,15 +189,18 @@ func OceanSell(price, amount float64, category, base, quote string) (string, err
 		return "", err
 	}
 
-	trace := uuid.Must(uuid.NewV4())
+	traceId := uuid.Must(uuid.NewV4()).String()
+	if len(traceId) == 1 {
+		traceId = trace[0]
+	}
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     base,
 		RecipientId: OceanCore,
 		Amount:      number.FromFloat(amount),
-		TraceId:     trace.String(),
+		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
-	return trace.String(), err
+	return traceId, err
 }
 
 func OceanCancel(trace string) error {

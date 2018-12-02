@@ -37,8 +37,11 @@ func (order *ExinOrderAction) Unpack(memo string) error {
 	return msgpack.Unmarshal(parsedpack, order)
 }
 
-func ExinTrade(amount float64, send, get string) (string, error) {
-	trace := uuid.Must(uuid.NewV4()).String()
+func ExinTrade(amount float64, send, get string, trace ...string) (string, error) {
+	traceId := uuid.Must(uuid.NewV4()).String()
+	if len(trace) == 1 {
+		traceId = trace[0]
+	}
 	order := ExinOrderAction{
 		A: uuid.Must(uuid.FromString(get)),
 	}
@@ -46,10 +49,10 @@ func ExinTrade(amount float64, send, get string) (string, error) {
 		AssetId:     send,
 		RecipientId: ExinCore,
 		Amount:      number.FromFloat(amount),
-		TraceId:     trace,
+		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}
-	return trace, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
 func ExinTradeMessager(side string, amount float64, base, quote string) (string, error) {
