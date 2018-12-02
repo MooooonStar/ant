@@ -97,3 +97,17 @@ func TestUUIDl(t *testing.T) {
 	id2 := UuidWithString(id + OceanCore)
 	fmt.Println(id2)
 }
+
+func TestOrderMemo(t *testing.T) {
+	match := "hKFBsHG/D/cnZkcEpnVRBA+6lcKhQrDgnuKAFu5M8IdN7SkU6dWaoU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
+	var action TransferAction
+	action.Unpack(match)
+	assert.Equal(t, "MATCH", action.S)
+
+	cancel := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+wHP59AZJKQVGdKFg/A6sB2KFTpkNBTkNFTA=="
+	var transfer TransferAction
+	transfer.Unpack(cancel)
+	assert.Equal(t, "CANCEL", transfer.S)
+
+	fmt.Println(action, transfer)
+}

@@ -9,9 +9,10 @@ import (
 func main() {
 	log.SetLevel(log.DebugLevel)
 	ant := Ant{
-		e: make(chan Event, 0),
+		event: make(chan Event, 0),
 	}
 	ctx := context.Background()
+	go ant.PollMixinNetwork(ctx)
 
 	for _, baseSymbol := range []string{"BTC", "EOS", "XIN", "ETH"} {
 		for _, quoteSymbol := range []string{"USDT", "BTC", "ETH"} {

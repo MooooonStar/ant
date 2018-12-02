@@ -6,7 +6,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -22,7 +21,7 @@ const (
 type Event struct {
 	ID       string          `json:"-"`
 	Category string          `json:"category"`
-	Price    decimal.Decimal `json:"ocean_price"`
+	Price    decimal.Decimal `json:"price"`
 	Profit   decimal.Decimal `json:"profit"`
 	Amount   decimal.Decimal `json:"amount"`
 	Base     string          `json:"base"`
@@ -30,7 +29,9 @@ type Event struct {
 }
 
 type Ant struct {
-	e chan Event
+	event     chan Event
+	snapshots map[string]bool
+	orders    map[string]bool
 }
 
 func UuidWithString(str string) string {
@@ -45,9 +46,7 @@ func UuidWithString(str string) string {
 func (ant *Ant) Run() {
 	for {
 		select {
-		case e := <-ant.e:
-			v, _ := prettyjson.Marshal(e)
-			log.Info(string(v))
+		case e := <-ant.event:
 			if WatchingMode {
 				continue
 			}
@@ -102,7 +101,7 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 			amount = otc.Amount
 		}
 		id := UuidWithString(Who(base) + Who(quote) + bidPrice.String() + amount.String() + "L")
-		ant.e <- Event{
+		ant.event <- Event{
 			ID:       id,
 			Category: "L",
 			Price:    bidPrice,
@@ -129,7 +128,7 @@ func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote strin
 			amount = otc.Amount
 		}
 		id := UuidWithString(Who(base) + Who(quote) + askPrice.String() + amount.String() + "H")
-		ant.e <- Event{
+		ant.event <- Event{
 			ID:       id,
 			Category: "H",
 			Price:    askPrice,
