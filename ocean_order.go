@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	mibot "github.com/MixinNetwork/bot-api-go-client"
+	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
@@ -162,7 +162,7 @@ func OceanBuy(price, amount float64, category, base, quote string) (string, erro
 	}
 
 	trace := uuid.Must(uuid.NewV4())
-	err := mibot.CreateTransfer(context.TODO(), &mibot.TransferInput{
+	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     quote,
 		RecipientId: OceanCore,
 		Amount:      number.FromFloat(amount).Round(Precision),
@@ -187,7 +187,7 @@ func OceanSell(price, amount float64, category, base, quote string) (string, err
 	}
 
 	trace := uuid.Must(uuid.NewV4())
-	err := mibot.CreateTransfer(context.TODO(), &mibot.TransferInput{
+	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     base,
 		RecipientId: OceanCore,
 		Amount:      number.FromFloat(amount),
@@ -202,7 +202,7 @@ func OceanCancel(trace string) error {
 	order := OceanOrderAction{
 		O: uuid.Must(uuid.FromString(trace)),
 	}
-	return mibot.CreateTransfer(context.TODO(), &mibot.TransferInput{
+	return bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     CNB,
 		RecipientId: OceanCore,
 		Amount:      number.FromFloat(0.101010),

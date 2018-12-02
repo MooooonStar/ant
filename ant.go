@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/hokaccha/go-prettyjson"
-
 	"github.com/shopspring/decimal"
-	"github.com/smallnest/rpcx/log"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
