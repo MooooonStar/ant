@@ -10,27 +10,23 @@ import (
 )
 
 func TestStrategyLow(t *testing.T) {
-	ant := Ant{
-		e: make(chan Event, 0),
-	}
-	price := 4000.0
-	amount := 1.2 / price
+	price := 4500.0
+	amount := 1.5 / price
 	base, quote := BTC, USDT
-	trace, err := ant.StrategyLow(price, amount, base, quote)
-	assert.Nil(t, err)
-	fmt.Println(trace)
+	if _, err := ExinTrade(amount*price, quote, base); err == nil {
+		trace, err := OceanSell(price, amount, "L", base, quote)
+		fmt.Println(trace, err)
+	}
 }
 
 func TestStrategyHigh(t *testing.T) {
-	ant := Ant{
-		e: make(chan Event, 0),
-	}
-	price := 4000.0
-	amount := 1.2 / price
+	price := 4500.0
+	amount := 1.5 / price
 	base, quote := BTC, USDT
-	trace, err := ant.StrategyHigh(price, amount, base, quote)
-	assert.Nil(t, err)
-	fmt.Println(trace)
+	if trace, err := OceanBuy(price, amount*price, "L", base, quote); err == nil {
+		fmt.Println(trace)
+		ExinTrade(amount, base, quote)
+	}
 }
 
 func TestGetExinDepth(t *testing.T) {
@@ -45,26 +41,6 @@ func TestOceanDepth(t *testing.T) {
 	data, _ := GetOceanDepth(ctx, XIN, BTC)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
-}
-
-func TestWatching(t *testing.T) {
-	// log.SetLevel(log.DebugLevel)
-	// ant := Ant{
-	// 	e: make(chan Event, 0),
-	// }
-	// ctx := context.Background()
-	// base, quote := BTC, USDT
-	// depth, err := GetOceanDepth(ctx, base, quote)
-	// assert.Nil(t, err)
-	// if err == nil && depth != nil {
-	// 	// if err := ant.Low(ctx, *depth, base, quote); err != nil {
-	// 	// 	log.Println(err)
-	// 	// }
-
-	// 	// if err := ant.High(ctx, *depth, base, quote); err != nil {
-	// 	// 	log.Println(err)
-	// 	// }
-	// }
 }
 
 func TestExinTrade(t *testing.T) {
@@ -84,10 +60,9 @@ func TestOceanTrade(t *testing.T) {
 	fmt.Println("buyTrace: ", buyTrace)
 }
 
-//usdt
-//911018ad-c761-4778-96dd-9dbd9047e3a4
+//51f73f1f-212e-48cd-b990-b5819716f8f7
 func TestOceanCancel(t *testing.T) {
 	//OceanCore = F1exCore
-	err := OceanCancel("911018ad-c761-4778-96dd-9dbd9047e3a4")
+	err := OceanCancel("51f73f1f-212e-48cd-b990-b5819716f8f7")
 	fmt.Println(err)
 }
