@@ -49,7 +49,6 @@ func ExinTrade(amount float64, send, get string) (string, error) {
 		TraceId:     trace,
 		Memo:        order.Pack(),
 	}
-	//fmt.Println("transfer", transfer)
 	return trace, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 

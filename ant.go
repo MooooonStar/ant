@@ -30,22 +30,6 @@ type Ant struct {
 	e chan Event
 }
 
-func (ant *Ant) StrategyLow(price, amount float64, base, quote string) (string, error) {
-	trace, err := OceanSell(price, amount, "L", base, quote)
-	if err == nil {
-		_, err = ExinTrade(amount*price, quote, base)
-	}
-	return trace, err
-}
-
-func (ant *Ant) StrategyHigh(price, amount float64, base, quote string) (string, error) {
-	trace, err := OceanBuy(price, amount/price, "L", base, quote)
-	if err == nil {
-		_, err = ExinTrade(amount, base, quote)
-	}
-	return trace, err
-}
-
 func (ant *Ant) Run() {
 	for {
 		select {
@@ -63,7 +47,33 @@ func (ant *Ant) Run() {
 	}
 }
 
-// when exin price is low
+func (ant *Ant) StrategyLow(price, amount float64, base, quote string) (string, error) {
+	trace, err := OceanSell(price, amount, "L", base, quote)
+	if err == nil {
+		_, err = ExinTrade(amount*price, quote, base)
+	}
+	return trace, err
+}
+
+func (ant *Ant) StrategyHigh(price, amount float64, base, quote string) (string, error) {
+	trace, err := OceanBuy(price, amount/price, "L", base, quote)
+	if err == nil {
+		_, err = ExinTrade(amount, base, quote)
+	}
+	return trace, err
+}
+
+func (ant *Ant) Watching(ctx context.Context, base, quote string) {
+	for {
+		depth, err := GetOceanOrder(ctx, base, quote)
+		if err == nil && depth != nil {
+			ant.Low(ctx, *depth, base, quote)
+			ant.High(ctx, *depth, base, quote)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
 func (ant *Ant) Low(ctx context.Context, depth Depth, base, quote string) error {
 	if depth.Bids == nil {
 		return fmt.Errorf("no bids in ocean.one")
@@ -171,15 +181,4 @@ func (ant *Ant) High(ctx context.Context, depth Depth, base, quote string) error
 		}
 	}
 	return nil
-}
-
-func (ant *Ant) Watching(ctx context.Context, base, quote string) {
-	for {
-		depth, err := GetOceanOrder(ctx, base, quote)
-		if err == nil && depth != nil {
-			ant.Low(ctx, *depth, base, quote)
-			ant.High(ctx, *depth, base, quote)
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
 }
