@@ -31,20 +31,20 @@ type Ant struct {
 	e chan Event
 }
 
-func (ant *Ant) StrategyLow(price, amount float64, base, quote string) error {
-	if _, err := ExinTrade(amount, quote, base); err != nil {
-		return err
+func (ant *Ant) StrategyLow(price, amount float64, base, quote string) (string, error) {
+	trace, err := OceanSell(price, amount, "L", base, quote)
+	if err == nil {
+		_, err = ExinTrade(amount*price, quote, base)
 	}
-	_, err := OceanSell(price, amount, "L", base, quote)
-	return err
+	return trace, err
 }
 
-func (ant *Ant) StrategyHigh(price, amount float64, base, quote string) error {
-	if _, err := OceanBuy(price, amount, "L", base, quote); err != nil {
-		return err
+func (ant *Ant) StrategyHigh(price, amount float64, base, quote string) (string, error) {
+	trace, err := OceanBuy(price, amount/price, "L", base, quote)
+	if err == nil {
+		_, err = ExinTrade(amount, base, quote)
 	}
-	_, err := ExinTrade(amount, base, quote)
-	return err
+	return trace, err
 }
 
 func (ant *Ant) Run() {
