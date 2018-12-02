@@ -7,19 +7,39 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 type Ticker struct {
-	Base        string `json:"echange_asset"`
-	BaseSymbol  string `json:"echange_asset_symbol"`
-	Quote       string `json:"base_asset"`
-	QuoteSymbol string `json:"base_asset_symbol"`
-	Price       string `json:"price"`
-	Min         string `json:"minimum_amount"`
-	Max         string `json:"maximum_amount"`
+	Base  string `json:"echange_asset"`
+	Quote string `json:"base_asset"`
+	Price string `json:"price"`
+	Min   string `json:"minimum_amount"`
+	Max   string `json:"maximum_amount"`
 }
 
-func GetExinPrice(ctx context.Context, base, quote string) (map[string]Ticker, error) {
+func GetExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
+	var depth Depth
+	if order, err := GetExinOrder(ctx, base, quote); err != nil {
+		return nil, err
+	} else {
+		depth.Bids = []Order{*order}
+	}
+
+	if order, err := GetExinOrder(ctx, quote, base); err != nil {
+		return nil, err
+	} else {
+		price := decimal.NewFromFloat(1.0).Div(order.Price)
+		order.Max = order.Max.Mul(price)
+		order.Min = order.Min.Mul(price)
+		order.Price = price
+		depth.Asks = []Order{*order}
+	}
+	return &depth, nil
+}
+
+func GetExinOrder(ctx context.Context, base, quote string) (*Order, error) {
 	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?echange_asset=%s&base_asset=%s", base, quote)
 	client := http.Client{
 		Timeout: 10 * time.Second,
@@ -46,12 +66,26 @@ func GetExinPrice(ctx context.Context, base, quote string) (map[string]Ticker, e
 	}
 
 	err = json.Unmarshal(body, &response)
-	return response.Data, err
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range response.Data {
+		if v.Base == base && v.Quote == quote {
+			price, _ := decimal.NewFromString(v.Price)
+			min, _ := decimal.NewFromString(v.Min)
+			max, _ := decimal.NewFromString(v.Max)
+			return &Order{Price: price, Max: max, Min: min}, nil
+		}
+	}
+	return nil, fmt.Errorf("not found.")
 }
 
 type Order struct {
-	Price  string `json:"price"`
-	Amount string `json:"amount"`
+	Price  decimal.Decimal
+	Amount decimal.Decimal
+	Min    decimal.Decimal
+	Max    decimal.Decimal
 }
 
 type Depth struct {
@@ -59,7 +93,7 @@ type Depth struct {
 	Bids []Order `json:"bids"`
 }
 
-func GetOceanOrder(ctx context.Context, base, quote string) (*Depth, error) {
+func GetOceanDepth(ctx context.Context, base, quote string) (*Depth, error) {
 	url := "https://events.ocean.one/markets/" + fmt.Sprintf("%s-%s", base, quote) + "/book"
 	client := http.Client{
 		Timeout: 10 * time.Second,

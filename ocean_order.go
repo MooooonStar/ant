@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	OceanCore = "3169b30b-885f-4d6d-aafd-f59bdd49436f"
+	OceanCore = "aaff5bef-42fb-4c9f-90e0-29f69176b7d4"
 	F1exCore  = "32cc0fda-5deb-448a-be70-a81dac4a3eed"
 )
 
@@ -157,7 +157,7 @@ func OceanBuy(price, amount float64, category, base, quote string) (string, erro
 		T: category,
 	}
 
-	if err := OrderCheck(order, fmt.Sprint(amount), base); err != nil {
+	if err := OrderCheck(order, fmt.Sprint(amount), quote); err != nil {
 		return "", err
 	}
 
