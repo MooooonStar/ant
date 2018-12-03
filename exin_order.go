@@ -71,7 +71,7 @@ func AssetPrecision(assetId string) int32 {
 	case EOS:
 		return 2
 	default:
-		log.Panicln("QuotePrecision", assetId)
+		log.Panicln("AssetPrecision", assetId)
 	}
 	return 0
 }

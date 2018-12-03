@@ -11,6 +11,18 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type Order struct {
+	Price  decimal.Decimal
+	Amount decimal.Decimal
+	Min    decimal.Decimal
+	Max    decimal.Decimal
+}
+
+type Depth struct {
+	Asks []Order `json:"asks"`
+	Bids []Order `json:"bids"`
+}
+
 type Ticker struct {
 	Base  string `json:"echange_asset"`
 	Quote string `json:"base_asset"`
@@ -79,18 +91,6 @@ func GetExinOrder(ctx context.Context, base, quote string) (*Order, error) {
 		}
 	}
 	return nil, fmt.Errorf("not found.")
-}
-
-type Order struct {
-	Price  decimal.Decimal
-	Amount decimal.Decimal
-	Min    decimal.Decimal
-	Max    decimal.Decimal
-}
-
-type Depth struct {
-	Asks []Order `json:"asks"`
-	Bids []Order `json:"bids"`
 }
 
 func GetOceanDepth(ctx context.Context, base, quote string) (*Depth, error) {
