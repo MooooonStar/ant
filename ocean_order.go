@@ -207,11 +207,12 @@ func OceanCancel(trace string) error {
 	order := OceanOrderAction{
 		O: uuid.Must(uuid.FromString(trace)),
 	}
+	cancelTrace := uuid.Must(uuid.NewV4()).String()
 	return bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     CNB,
 		RecipientId: OceanCore,
 		Amount:      number.FromFloat(0.101010),
-		TraceId:     uuid.Must(uuid.NewV4()).String(),
+		TraceId:     cancelTrace,
 		Memo:        order.Pack(),
 	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }

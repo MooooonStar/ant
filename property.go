@@ -56,6 +56,8 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 		Data struct {
 			SnapshotId string `json:"snapshot_id"`
 			TraceId    string `json:"trace_id"`
+			OpponentId string `json:"opponent_id"`
+			Data       string `json:"data"`
 			Amount     string `json:"amount"`
 			Asset      struct {
 				Symbol string `json:"symbol"`
@@ -63,6 +65,7 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 		} `json:"data"`
 		Error string `json:"error"`
 	}
+
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
 		return "", err
@@ -73,5 +76,6 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 
 	v, _ := prettyjson.Marshal(resp.Data)
 	fmt.Println("info:", string(v))
+
 	return resp.Data.TraceId, nil
 }
