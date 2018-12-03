@@ -111,3 +111,9 @@ func TestOrderMemo(t *testing.T) {
 
 	fmt.Println(action, transfer)
 }
+
+func TestReadAssets(t *testing.T) {
+	data, _ := ReadAssets(context.TODO())
+	v, _ := prettyjson.Marshal(data)
+	fmt.Println(string(v))
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"io"
+	"sync"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -12,12 +13,14 @@ import (
 )
 
 const (
-	WatchingMode    = true
-	ProfitThreshold = 0.1 / (1 - OceanFee) / (1 - ExinFee)
-	OceanFee        = 0.002
-	ExinFee         = 0.001
-	StrategyLow     = "L"
-	StrategyHigh    = "H"
+	WatchingMode       = true
+	ProfitThreshold    = 0.1 / (1 - OceanFee) / (1 - ExinFee)
+	OceanFee           = 0.002
+	ExinFee            = 0.001
+	StrategyLow        = "L"
+	StrategyHigh       = "H"
+	PendingOrdersLimit = 10
+	OrderLife          = 60 * time.Second
 )
 
 type Event struct {
@@ -33,7 +36,18 @@ type Event struct {
 type Ant struct {
 	event     chan Event
 	snapshots map[string]bool
-	orders    map[string]bool
+	exOrders  map[string]bool
+	otcOrders map[string]bool
+	lock      sync.Mutex
+}
+
+func NewAnt() *Ant {
+	return &Ant{
+		event:     make(chan Event, 0),
+		snapshots: make(map[string]bool, 0),
+		exOrders:  make(map[string]bool, 0),
+		otcOrders: make(map[string]bool, 0),
+	}
 }
 
 func UuidWithString(str string) string {
@@ -45,27 +59,36 @@ func UuidWithString(str string) string {
 	return uuid.FromBytesOrNil(sum).String()
 }
 
-func (ant *Ant) Run() {
+func (ant *Ant) Trade() {
 	for {
 		select {
 		case e := <-ant.event:
 			if WatchingMode {
 				continue
 			}
+			if len(ant.exOrders) > PendingOrdersLimit {
+				continue
+			}
 			amount, _ := e.Amount.Float64()
 			price, _ := e.Price.Float64()
 			switch e.Category {
 			case StrategyLow:
-				trace := UuidWithString(e.ID + ExinCore)
-				if _, err := ExinTrade(amount*price, e.Quote, e.Base, trace); err == nil {
-					trace := UuidWithString(e.ID + OceanCore)
-					OceanSell(price, amount, StrategyLow, e.Base, e.Quote, trace)
+				otcOrder := UuidWithString(e.ID + ExinCore)
+				if _, err := ExinTrade(amount*price, e.Quote, e.Base, otcOrder); err == nil {
+					ant.otcOrders[otcOrder] = true
+					exchangeOrder := UuidWithString(e.ID + OceanCore)
+					if _, err := OceanSell(price, amount, StrategyLow, e.Base, e.Quote, exchangeOrder); err == nil {
+						ant.exOrders[exchangeOrder] = true
+					}
 				}
 			case StrategyHigh:
-				trace := UuidWithString(e.ID + OceanCore)
-				if _, err := OceanBuy(price, amount*price, StrategyHigh, e.Base, e.Quote, trace); err == nil {
-					trace := UuidWithString(e.ID + ExinCore)
-					ExinTrade(amount, e.Base, e.Quote, trace)
+				exchangeOrder := UuidWithString(e.ID + OceanCore)
+				if _, err := OceanBuy(price, amount*price, StrategyHigh, e.Base, e.Quote, exchangeOrder); err == nil {
+					ant.exOrders[exchangeOrder] = true
+					otcOrder := UuidWithString(e.ID + ExinCore)
+					if _, err := ExinTrade(amount, e.Base, e.Quote, otcOrder); err == nil {
+						ant.otcOrders[otcOrder] = true
+					}
 				}
 			}
 		}

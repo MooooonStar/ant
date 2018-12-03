@@ -1,7 +1,6 @@
 package main
 
 import (
-	bot "MoooonStar/bot-api-go-client"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -10,8 +9,8 @@ import (
 	"log"
 	"time"
 
+	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
-
 	uuid "github.com/satori/go.uuid"
 	"github.com/ugorji/go/codec"
 )
@@ -139,6 +138,9 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
-	ex.orders[order.B.String()] = true
+	if _, ok := ex.exOrders[order.B.String()]; ok {
+		delete(ex.exOrders, order.B.String())
+	}
+
 	return nil
 }
