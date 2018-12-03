@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 
 	"github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
@@ -37,7 +38,7 @@ func (order *ExinOrderAction) Unpack(memo string) error {
 	return msgpack.Unmarshal(parsedpack, order)
 }
 
-func ExinTrade(amount float64, send, get string, trace ...string) (string, error) {
+func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	traceId := uuid.Must(uuid.NewV4()).String()
 	if len(trace) == 1 {
 		traceId = trace[0]
@@ -45,14 +46,34 @@ func ExinTrade(amount float64, send, get string, trace ...string) (string, error
 	order := ExinOrderAction{
 		A: uuid.Must(uuid.FromString(get)),
 	}
+
+	precision := AssetPrecision(send)
 	transfer := bot.TransferInput{
 		AssetId:     send,
 		RecipientId: ExinCore,
-		Amount:      number.FromFloat(amount),
+		Amount:      number.FromString(amount).Round(precision),
 		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}
 	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+}
+
+func AssetPrecision(assetId string) int32 {
+	switch assetId {
+	case XIN:
+		return 4
+	case ETH:
+		return 4
+	case BTC:
+		return 4
+	case USDT:
+		return 2
+	case EOS:
+		return 2
+	default:
+		log.Panicln("QuotePrecision", assetId)
+	}
+	return 0
 }
 
 func ExinTradeMessager(side string, amount float64, base, quote string) (string, error) {

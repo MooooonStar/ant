@@ -147,12 +147,12 @@ func OrderCheck(action OceanOrderAction, desireAmount, quote string) error {
 }
 
 //if the category is "M", the price should be zero.
-func OceanBuy(price, amount float64, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("++++++Buy %s at price %12.8f, amount %12.8f, type: %s ", base, price, amount, category)
+func OceanBuy(price, amount, category, base, quote string, trace ...string) (string, error) {
+	log.Infof("++++++Buy %s at price %12.8s, amount %12.8s, type: %s ", base, price, amount, category)
 	order := OceanOrderAction{
 		S: "B",
 		A: uuid.Must(uuid.FromString(base)),
-		P: number.FromFloat(price).Round(PricePrecision).String(),
+		P: number.FromString(price).Round(PricePrecision).String(),
 		T: category,
 	}
 
@@ -167,7 +167,7 @@ func OceanBuy(price, amount float64, category, base, quote string, trace ...stri
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     quote,
 		RecipientId: OceanCore,
-		Amount:      number.FromFloat(amount).Round(AmountPrecision),
+		Amount:      number.FromString(amount).Round(AmountPrecision),
 		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
@@ -175,12 +175,12 @@ func OceanBuy(price, amount float64, category, base, quote string, trace ...stri
 }
 
 //if the category is "M", the price should be zero.
-func OceanSell(price, amount float64, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("-----Sell %s at price %12.8f, amount %12.8f, type: %s", quote, price, amount, category)
+func OceanSell(price, amount, category, base, quote string, trace ...string) (string, error) {
+	log.Infof("-----Sell %s at price %12.8s, amount %12.8s, type: %s", quote, price, amount, category)
 	order := OceanOrderAction{
 		S: "A",
 		A: uuid.Must(uuid.FromString(quote)),
-		P: number.FromFloat(price).Round(PricePrecision).String(),
+		P: number.FromString(price).Round(PricePrecision).String(),
 		T: category,
 	}
 
@@ -195,7 +195,7 @@ func OceanSell(price, amount float64, category, base, quote string, trace ...str
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     base,
 		RecipientId: OceanCore,
-		Amount:      number.FromFloat(amount).Round(AmountPrecision),
+		Amount:      number.FromString(amount).Round(AmountPrecision),
 		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)

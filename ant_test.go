@@ -35,31 +35,41 @@ func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
 	data, _ := GetExinDepth(ctx, BTC, USDT)
 	v, _ := prettyjson.Marshal(&data)
-	fmt.Println(string(v), "ifoo")
+	fmt.Println(string(v))
+
+	a := data.Bids[0].Max.Exponent()
+	b := data.Bids[0].Min.Exponent()
+	c := data.Asks[0].Min.Exponent()
+	fmt.Println(a, b, c)
+
+	d := decimal.NewFromFloat(1.2456)
+	e := decimal.NewFromFloat(0.01)
+	fmt.Println(d.Round(-e.Exponent()))
 }
 
 func TestOceanDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetOceanDepth(ctx, BTC, USDT)
+	data, _ := GetOceanDepth(ctx, EOS, USDT)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
 }
 
 func TestExinTrade(t *testing.T) {
-	ExinTrade(1, USDT, BTC)
-	ExinTrade(0.0001, BTC, USDT)
+	amount := 1.0
+	trace, err := ExinTrade(amount, USDT, EOS)
+	fmt.Println(trace, err)
 }
 
 func TestOceanTrade(t *testing.T) {
 	//OceanCore = F1exCore
-	price, amount := 0.5, 0.001
-	sellTrace, err := OceanSell(price, amount, "L", XIN, BTC)
+	price, amount := 2.8998, 0.3582
+	sellTrace, err := OceanSell(price, amount, "L", EOS, USDT)
 	assert.Nil(t, err)
 	fmt.Println("sellTrace: ", sellTrace)
 
-	buyTrace, err := OceanBuy(price, amount*price, "L", XIN, BTC)
-	assert.Nil(t, err)
-	fmt.Println("buyTrace: ", buyTrace)
+	// buyTrace, err := OceanBuy(price, amount*price, "L", XIN, BTC)
+	// assert.Nil(t, err)
+	// fmt.Println("buyTrace: ", buyTrace)
 }
 
 //51f73f1f-212e-48cd-b990-b5819716f8f7

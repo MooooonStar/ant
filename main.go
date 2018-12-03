@@ -93,7 +93,7 @@ func main() {
 				go ant.Trade(subctx)
 				select {
 				case <-sig:
-					fmt.Println("cancel orders in 5 seconds.")
+					fmt.Println("cancel orders in 3 seconds.")
 					cancel()
 					time.Sleep(3 * time.Second)
 					return nil

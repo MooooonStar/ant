@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"sync"
 	"time"
 
 	"github.com/hokaccha/go-prettyjson"
@@ -16,15 +15,15 @@ import (
 )
 
 const (
-	WatchingMode       = true
-	ProfitThreshold    = 0.001 / (1 - OceanFee) / (1 - ExinFee)
+	WatchingMode       = false
+	ProfitThreshold    = -0.5 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	StrategyLow        = "L"
 	StrategyHigh       = "H"
 	PendingOrdersLimit = 10
 	OrderLife          = 30 * time.Second
-	OrderConfirmedTime = 5 * time.Second
+	OrderConfirmedTime = 10 * time.Second
 )
 
 type Event struct {
@@ -42,7 +41,6 @@ type Ant struct {
 	snapshots    map[string]bool
 	exOrders     map[string]bool
 	otcOrders    map[string]bool
-	lock         sync.Mutex
 	orderMatched chan bool
 }
 
@@ -84,12 +82,10 @@ func (ant *Ant) Trade(ctx context.Context) {
 				continue
 			}
 
-			amount, _ := e.Amount.Float64()
-			price, _ := e.Price.Float64()
 			switch e.Category {
 			case StrategyLow:
 				exchangeOrder := UuidWithString(e.ID + OceanCore)
-				if _, err := OceanSell(price, amount, OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
+				if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 					log.Error(err)
 					continue
 				}
@@ -98,7 +94,8 @@ func (ant *Ant) Trade(ctx context.Context) {
 				case <-ant.orderMatched:
 					delete(ant.exOrders, exchangeOrder)
 					otcOrder := UuidWithString(e.ID + ExinCore)
-					if _, err := ExinTrade(amount*price, e.Quote, e.Base, otcOrder); err == nil {
+					equalAmount := e.Price.Mul(e.Amount)
+					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err == nil {
 						ant.otcOrders[otcOrder] = true
 					}
 				case <-time.After(OrderConfirmedTime):
@@ -107,8 +104,10 @@ func (ant *Ant) Trade(ctx context.Context) {
 					}
 				}
 			case StrategyHigh:
+				fmt.Println("-----amount", e.Amount.String())
+				equalAmount := e.Amount.Mul(e.Price)
 				exchangeOrder := UuidWithString(e.ID + OceanCore)
-				if _, err := OceanBuy(price, amount*price, OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
+				if _, err := OceanBuy(e.Price.String(), equalAmount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 					log.Error(err)
 					continue
 				}
@@ -117,7 +116,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 				case <-ant.orderMatched:
 					delete(ant.exOrders, exchangeOrder)
 					otcOrder := UuidWithString(e.ID + ExinCore)
-					if _, err := ExinTrade(amount, e.Base, e.Quote, otcOrder); err == nil {
+					if _, err := ExinTrade(e.Amount.String(), e.Base, e.Quote, otcOrder); err == nil {
 						ant.otcOrders[otcOrder] = true
 					}
 				case <-time.After(OrderConfirmedTime):
@@ -136,8 +135,8 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 		case <-ctx.Done():
 			return
 		default:
-			if exchange, err := GetOceanDepth(ctx, base, quote); err == nil {
-				if otc, err := GetExinDepth(ctx, base, quote); err == nil {
+			if exchange, err := ant.GetOceanDepth(ctx, base, quote); err == nil {
+				if otc, err := ant.GetExinDepth(ctx, base, quote); err == nil {
 					if len(exchange.Bids) > 0 && len(otc.Bids) > 0 {
 						ant.Low(ctx, exchange.Bids[0], otc.Bids[0], base, quote)
 					}
@@ -153,15 +152,14 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 }
 
 func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string) {
-	fmt.Println("order", exchange, otc)
 	bidPrice, price := exchange.Price, otc.Price
 	bidProfit := bidPrice.Sub(price).Div(price)
 	log.Debugf("bid -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, bidProfit, Who(base), Who(quote))
 	if bidProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
-		if exchange.Amount.LessThanOrEqual(otc.Min) {
-			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
-			return
-		}
+		// if exchange.Amount.LessThanOrEqual(otc.Min) {
+		// 	log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
+		// 	return
+		// }
 		amount := exchange.Amount
 		if amount.GreaterThanOrEqual(otc.Max) {
 			amount = otc.Max
@@ -185,10 +183,10 @@ func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote strin
 	askProfit := price.Sub(askPrice).Div(price)
 	log.Debugf("ask -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, askProfit, Who(base), Who(quote))
 	if askProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
-		if exchange.Amount.LessThanOrEqual(otc.Min) {
-			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
-			return
-		}
+		// if exchange.Amount.LessThanOrEqual(otc.Min) {
+		// 	log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
+		// 	return
+		// }
 		amount := exchange.Amount
 		if amount.GreaterThanOrEqual(otc.Max) {
 			amount = otc.Max
