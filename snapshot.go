@@ -10,7 +10,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/fox-one/ocean.one/config"
+	"github.com/hokaccha/go-prettyjson"
+
 	uuid "github.com/satori/go.uuid"
 	"github.com/ugorji/go/codec"
 )
@@ -64,7 +65,7 @@ type Snapshot struct {
 
 func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, limit int) ([]*Snapshot, error) {
 	uri := fmt.Sprintf("/network/snapshots?offset=%s&order=ASC&limit=%d", checkpoint.Format(time.RFC3339Nano), limit)
-	token, err := bot.SignAuthenticationToken(config.ClientId, config.SessionId, config.SessionKey, "GET", uri, "")
+	token, err := bot.SignAuthenticationToken(ClientId, SessionId, PrivateKey, "GET", uri, "")
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,6 @@ func (ex *Ant) ensureProcessSnapshot(ctx context.Context, s *Snapshot) {
 }
 
 func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
-	log.Println(s)
 	if s.OpponentId != OceanCore {
 		return nil
 	}
@@ -131,6 +131,9 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	if err := order.Unpack(s.Data); err != nil {
 		return err
 	}
+
+	v, _ := prettyjson.Marshal(s)
+	fmt.Println(string(v))
 
 	if order.B == uuid.Nil {
 		return nil

@@ -9,7 +9,9 @@ import (
 func main() {
 	log.SetLevel(log.DebugLevel)
 	ant := Ant{
-		event: make(chan Event, 0),
+		event:     make(chan Event, 0),
+		snapshots: make(map[string]bool, 0),
+		orders:    make(map[string]bool, 0),
 	}
 	ctx := context.Background()
 	go ant.PollMixinNetwork(ctx)
