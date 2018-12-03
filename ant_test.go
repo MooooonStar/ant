@@ -33,7 +33,7 @@ func TestStrategyHigh(t *testing.T) {
 
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetExinDepth(ctx, EOS, BTC)
+	data, _ := GetExinDepth(ctx, BTC, USDT)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
 }

@@ -64,9 +64,9 @@ func main() {
 					quoteSymbols = []string{quoteSymbol}
 				}
 
-				ant := NewAnt()
 				ctx := context.Background()
 				subctx, cancel := context.WithCancel(ctx)
+				ant := NewAnt()
 				go ant.PollMixinNetwork(subctx)
 				for _, baseSymbol := range baseSymbols {
 					for _, quoteSymbol := range quoteSymbols {
@@ -78,6 +78,7 @@ func main() {
 				go ant.Trade(subctx)
 				select {
 				case <-sig:
+					fmt.Println("cancel orders in 5 seconds.")
 					cancel()
 					time.Sleep(5 * time.Second)
 					return nil

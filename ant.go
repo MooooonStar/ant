@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 	"time"
 
@@ -18,7 +17,7 @@ import (
 
 const (
 	WatchingMode       = true
-	ProfitThreshold    = 0.01 / (1 - OceanFee) / (1 - ExinFee)
+	ProfitThreshold    = 0.001 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	StrategyLow        = "L"
@@ -45,7 +44,6 @@ type Ant struct {
 	otcOrders    map[string]bool
 	lock         sync.Mutex
 	orderMatched chan bool
-	sig          chan os.Signal
 }
 
 func NewAnt() *Ant {
@@ -55,7 +53,6 @@ func NewAnt() *Ant {
 		exOrders:     make(map[string]bool, 0),
 		otcOrders:    make(map[string]bool, 0),
 		orderMatched: make(chan bool, 0),
-		sig:          make(chan os.Signal, 0),
 	}
 }
 
@@ -128,18 +125,23 @@ func (ant *Ant) Trade(ctx context.Context) {
 
 func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 	for {
-		if exchange, err := GetOceanDepth(ctx, base, quote); err == nil {
-			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
-				if len(exchange.Bids) > 0 && len(otc.Bids) > 0 {
-					ant.Low(ctx, exchange.Bids[0], otc.Bids[0], base, quote)
-				}
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			if exchange, err := GetOceanDepth(ctx, base, quote); err == nil {
+				if otc, err := GetExinDepth(ctx, base, quote); err == nil {
+					if len(exchange.Bids) > 0 && len(otc.Bids) > 0 {
+						ant.Low(ctx, exchange.Bids[0], otc.Bids[0], base, quote)
+					}
 
-				if len(exchange.Asks) > 0 && len(otc.Asks) > 0 {
-					ant.High(ctx, exchange.Asks[0], otc.Asks[0], base, quote)
+					if len(exchange.Asks) > 0 && len(otc.Asks) > 0 {
+						ant.High(ctx, exchange.Asks[0], otc.Asks[0], base, quote)
+					}
 				}
 			}
+			time.Sleep(100 * time.Millisecond)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -148,13 +150,13 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 	bidProfit := bidPrice.Sub(price).Div(price)
 	log.Debugf("bid -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, bidProfit, Who(base), Who(quote))
 	if bidProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
-		if exchange.Amount.LessThanOrEqual(otc.Amount) {
-			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Amount)
+		if exchange.Amount.LessThanOrEqual(otc.Min) {
+			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
 			return
 		}
 		amount := exchange.Amount
-		if amount.GreaterThanOrEqual(otc.Amount) {
-			amount = otc.Amount
+		if amount.GreaterThanOrEqual(otc.Max) {
+			amount = otc.Max
 		}
 		id := UuidWithString(Who(base) + Who(quote) + bidPrice.String() + amount.String() + StrategyLow)
 		ant.event <- Event{
@@ -171,17 +173,18 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 }
 
 func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote string) {
+	fmt.Println("hi, ", exchange, otc)
 	askPrice, price := exchange.Price, otc.Price
 	askProfit := price.Sub(askPrice).Div(price)
 	log.Debugf("ask -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, askProfit, Who(base), Who(quote))
 	if askProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
-		if exchange.Amount.LessThanOrEqual(otc.Amount) {
-			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Amount)
+		if exchange.Amount.LessThanOrEqual(otc.Min) {
+			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
 			return
 		}
 		amount := exchange.Amount
-		if amount.GreaterThanOrEqual(otc.Amount) {
-			amount = otc.Amount
+		if amount.GreaterThanOrEqual(otc.Max) {
+			amount = otc.Max
 		}
 		id := UuidWithString(Who(base) + Who(quote) + askPrice.String() + amount.String() + StrategyHigh)
 		ant.event <- Event{

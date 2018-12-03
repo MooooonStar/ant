@@ -1,7 +1,7 @@
 package main
 
 const (
-	ClientId   = "116dfc9b-d084-3f1f-b341-495b9e4cab23"
+	ClientId   = "116dfc9b-d084-3f1f-b341-495b9e4cab24"
 	PinCode    = "654775"
 	SessionId  = "2a9cbc8b-0e05-4d57-9767-9256df52283c"
 	PinToken   = "IHn7PiyemVbZCF0DNwdEayvB2HS0n0mIHZV4+3wI0Zyu9U2NwY6Lj3+cQK6+pyZwndqpXBPzImA7XI6GA+YFy1aotqr0CWI99hvmj/FEsCGWdIGwBMJEjzstfhjampzrM2mNpgcXi8DXE2YYQtNbxIXv5Tir+fMfsTiU/1vnWPc="
