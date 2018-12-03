@@ -16,7 +16,7 @@ import (
 
 const (
 	WatchingMode       = false
-	ProfitThreshold    = -0.5 / (1 - OceanFee) / (1 - ExinFee)
+	ProfitThreshold    = 0.001 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	StrategyLow        = "L"
@@ -156,10 +156,10 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 	bidProfit := bidPrice.Sub(price).Div(price)
 	log.Debugf("bid -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, bidProfit, Who(base), Who(quote))
 	if bidProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
-		// if exchange.Amount.LessThanOrEqual(otc.Min) {
-		// 	log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
-		// 	return
-		// }
+		if exchange.Amount.LessThanOrEqual(otc.Min) {
+			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
+			return
+		}
 		amount := exchange.Amount
 		if amount.GreaterThanOrEqual(otc.Max) {
 			amount = otc.Max
@@ -183,10 +183,10 @@ func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote strin
 	askProfit := price.Sub(askPrice).Div(price)
 	log.Debugf("ask -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, askProfit, Who(base), Who(quote))
 	if askProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
-		// if exchange.Amount.LessThanOrEqual(otc.Min) {
-		// 	log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
-		// 	return
-		// }
+		if exchange.Amount.LessThanOrEqual(otc.Min) {
+			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
+			return
+		}
 		amount := exchange.Amount
 		if amount.GreaterThanOrEqual(otc.Max) {
 			amount = otc.Max
