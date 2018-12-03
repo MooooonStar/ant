@@ -3,9 +3,13 @@ package main
 import (
 	"context"
 	"crypto/md5"
+	"fmt"
 	"io"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/hokaccha/go-prettyjson"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
@@ -14,13 +18,14 @@ import (
 
 const (
 	WatchingMode       = true
-	ProfitThreshold    = 0.1 / (1 - OceanFee) / (1 - ExinFee)
+	ProfitThreshold    = 0.01 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	StrategyLow        = "L"
 	StrategyHigh       = "H"
 	PendingOrdersLimit = 10
 	OrderLife          = 60 * time.Second
+	OrderConfirmedTime = 10 * time.Second
 )
 
 type Event struct {
@@ -34,19 +39,23 @@ type Event struct {
 }
 
 type Ant struct {
-	event     chan Event
-	snapshots map[string]bool
-	exOrders  map[string]bool
-	otcOrders map[string]bool
-	lock      sync.Mutex
+	event        chan Event
+	snapshots    map[string]bool
+	exOrders     map[string]bool
+	otcOrders    map[string]bool
+	lock         sync.Mutex
+	orderMatched chan bool
+	sig          chan os.Signal
 }
 
 func NewAnt() *Ant {
 	return &Ant{
-		event:     make(chan Event, 0),
-		snapshots: make(map[string]bool, 0),
-		exOrders:  make(map[string]bool, 0),
-		otcOrders: make(map[string]bool, 0),
+		event:        make(chan Event, 0),
+		snapshots:    make(map[string]bool, 0),
+		exOrders:     make(map[string]bool, 0),
+		otcOrders:    make(map[string]bool, 0),
+		orderMatched: make(chan bool, 0),
+		sig:          make(chan os.Signal, 0),
 	}
 }
 
@@ -59,35 +68,57 @@ func UuidWithString(str string) string {
 	return uuid.FromBytesOrNil(sum).String()
 }
 
-func (ant *Ant) Trade() {
+func (ant *Ant) Trade(ctx context.Context) {
 	for {
 		select {
+		case <-ctx.Done():
+			for trace, _ := range ant.exOrders {
+				for i := 0; i < 3; i++ {
+					fmt.Println("cancel order:", trace)
+					OceanCancel(trace)
+					time.Sleep(100 * time.Millisecond)
+				}
+			}
+			return
 		case e := <-ant.event:
-			if WatchingMode {
-				continue
-			}
-			if len(ant.exOrders) > PendingOrdersLimit {
-				continue
-			}
+			v, _ := prettyjson.Marshal(e)
+			fmt.Println("profit found, ", string(v))
+
 			amount, _ := e.Amount.Float64()
 			price, _ := e.Price.Float64()
 			switch e.Category {
 			case StrategyLow:
-				otcOrder := UuidWithString(e.ID + ExinCore)
-				if _, err := ExinTrade(amount*price, e.Quote, e.Base, otcOrder); err == nil {
-					ant.otcOrders[otcOrder] = true
-					exchangeOrder := UuidWithString(e.ID + OceanCore)
-					if _, err := OceanSell(price, amount, StrategyLow, e.Base, e.Quote, exchangeOrder); err == nil {
-						ant.exOrders[exchangeOrder] = true
+				exchangeOrder := UuidWithString(e.ID + OceanCore)
+				if _, err := OceanSell(price, amount, StrategyLow, e.Base, e.Quote, exchangeOrder); err == nil {
+					ant.exOrders[exchangeOrder] = true
+					select {
+					case <-ant.orderMatched:
+						delete(ant.exOrders, exchangeOrder)
+						otcOrder := UuidWithString(e.ID + ExinCore)
+						if _, err := ExinTrade(amount*price, e.Quote, e.Base, otcOrder); err == nil {
+							ant.otcOrders[otcOrder] = true
+						}
+					case <-time.After(OrderConfirmedTime):
+						for i := 0; i < 3; i++ {
+							OceanCancel(exchangeOrder)
+						}
 					}
 				}
 			case StrategyHigh:
 				exchangeOrder := UuidWithString(e.ID + OceanCore)
 				if _, err := OceanBuy(price, amount*price, StrategyHigh, e.Base, e.Quote, exchangeOrder); err == nil {
 					ant.exOrders[exchangeOrder] = true
-					otcOrder := UuidWithString(e.ID + ExinCore)
-					if _, err := ExinTrade(amount, e.Base, e.Quote, otcOrder); err == nil {
-						ant.otcOrders[otcOrder] = true
+					select {
+					case <-ant.orderMatched:
+						delete(ant.exOrders, exchangeOrder)
+						otcOrder := UuidWithString(e.ID + ExinCore)
+						if _, err := ExinTrade(amount, e.Base, e.Quote, otcOrder); err == nil {
+							ant.otcOrders[otcOrder] = true
+						}
+					case <-time.After(OrderConfirmedTime):
+						for i := 0; i < 3; i++ {
+							OceanCancel(exchangeOrder)
+						}
 					}
 				}
 			}

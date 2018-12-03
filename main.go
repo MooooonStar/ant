@@ -4,15 +4,20 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"sort"
+	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 func main() {
-	app := cli.NewApp()
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
 
+	app := cli.NewApp()
 	app.Commands = []cli.Command{
 		{
 			Name:  "cancel",
@@ -22,7 +27,6 @@ func main() {
 				cli.StringFlag{Name: "trace,t"},
 			},
 			Action: func(c *cli.Context) error {
-				log.Println("cancel order info:")
 				snapshot := c.String("snapshot")
 				trace, err := ReadSnapshot(context.TODO(), snapshot)
 				if err != nil {
@@ -38,23 +42,46 @@ func main() {
 			},
 		},
 		{
-			Name:  "mining",
+			Name:  "run",
 			Usage: "find profits between different exchanges",
+			Flags: []cli.Flag{
+				cli.StringFlag{Name: "pair"},
+			},
 			Action: func(c *cli.Context) error {
 				log.SetLevel(log.DebugLevel)
+
+				pair := c.String("pair")
+				symbols := strings.Split(pair, "/")
+				var baseSymbol, quoteSymbol string
+				if len(symbols) == 2 {
+					baseSymbol, quoteSymbol = symbols[0], symbols[1]
+				}
+				baseSymbols := []string{"BTC", "EOS", "XIN", "ETH"}
+				quoteSymbols := []string{"USDT", "XIN", "BTC"}
+
+				if len(baseSymbol) > 0 && len(quoteSymbol) > 0 {
+					baseSymbols = []string{baseSymbol}
+					quoteSymbols = []string{quoteSymbol}
+				}
+
 				ant := NewAnt()
 				ctx := context.Background()
-				go ant.PollMixinNetwork(ctx)
-
-				for _, baseSymbol := range []string{"BTC", "EOS", "XIN", "ETH"} {
-					for _, quoteSymbol := range []string{"USDT", "BTC", "ETH"} {
-						base := GetAssetId(baseSymbol)
-						quote := GetAssetId(quoteSymbol)
-						go ant.Watching(ctx, base, quote)
+				subctx, cancel := context.WithCancel(ctx)
+				go ant.PollMixinNetwork(subctx)
+				for _, baseSymbol := range baseSymbols {
+					for _, quoteSymbol := range quoteSymbols {
+						base := GetAssetId(strings.ToUpper(baseSymbol))
+						quote := GetAssetId(strings.ToUpper(quoteSymbol))
+						go ant.Watching(subctx, base, quote)
 					}
 				}
-				ant.Trade()
-				return nil
+				go ant.Trade(subctx)
+				select {
+				case <-sig:
+					cancel()
+					time.Sleep(5 * time.Second)
+					return nil
+				}
 			},
 		},
 	}

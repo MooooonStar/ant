@@ -75,7 +75,7 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 	}
 
 	v, _ := prettyjson.Marshal(resp.Data)
-	fmt.Println("info:", string(v))
+	fmt.Println("snapshot info:", string(v))
 
 	return resp.Data.TraceId, nil
 }

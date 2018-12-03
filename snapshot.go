@@ -139,7 +139,9 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	}
 
 	if _, ok := ex.exOrders[order.B.String()]; ok {
-		delete(ex.exOrders, order.B.String())
+		//delete(ex.exOrders, order.B.String())
+		log.Println("order matched:", order)
+		ex.orderMatched <- true
 	}
 
 	return nil
