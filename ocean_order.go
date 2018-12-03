@@ -31,11 +31,11 @@ var (
 )
 
 type OceanOrderAction struct {
-	S string    `json:"side"`         // side
-	A uuid.UUID `json:"asset"`        // asset
-	P string    `json:"price"`        // price
-	T string    `json:"type"`         // type
-	O uuid.UUID `json:"id,omitempty"` // order
+	S string    // side
+	A uuid.UUID // asset
+	P string    // price
+	T string    // type
+	O uuid.UUID // order
 }
 
 func (action *OceanOrderAction) Pack() string {

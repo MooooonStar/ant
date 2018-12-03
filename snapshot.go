@@ -9,8 +9,9 @@ import (
 	"log"
 	"time"
 
-	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
+
+	bot "github.com/MixinNetwork/bot-api-go-client"
 	uuid "github.com/satori/go.uuid"
 	"github.com/ugorji/go/codec"
 )
@@ -122,7 +123,7 @@ func (ex *Ant) ensureProcessSnapshot(ctx context.Context, s *Snapshot) {
 }
 
 func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
-	if s.OpponentId != OceanCore {
+	if len(s.OpponentId) == 0 || len(s.UserId) == 0 {
 		return nil
 	}
 
@@ -131,16 +132,21 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return err
 	}
 
-	v, _ := prettyjson.Marshal(s)
-	fmt.Println(string(v))
+	v0, _ := prettyjson.Marshal(s)
+	fmt.Println("find snapshot.", string(v0))
+
+	v, _ := prettyjson.Marshal(order)
+	fmt.Println("find order.", string(v))
 
 	if order.B == uuid.Nil {
 		return nil
 	}
 
 	if _, ok := ex.exOrders[order.B.String()]; ok {
-		//delete(ex.exOrders, order.B.String())
-		log.Println("order matched:", order)
+		log.Println("++++order matched++++:", order)
+		ex.orderMatched <- true
+	} else if _, found := ex.exOrders[order.A.String()]; found {
+		log.Println("++++order matched++++:", order)
 		ex.orderMatched <- true
 	}
 

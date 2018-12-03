@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hokaccha/go-prettyjson"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -19,6 +21,19 @@ func main() {
 
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
+		{
+			Name:  "info",
+			Usage: "show assets",
+			Action: func(c *cli.Context) error {
+				assets, err := ReadAssets(context.TODO())
+				if err != nil {
+					return err
+				}
+				v, _ := prettyjson.Marshal(assets)
+				fmt.Println(string(v))
+				return nil
+			},
+		},
 		{
 			Name:  "cancel",
 			Usage: "cancel order in ocean.one by snapshot or trace",
@@ -80,7 +95,7 @@ func main() {
 				case <-sig:
 					fmt.Println("cancel orders in 5 seconds.")
 					cancel()
-					time.Sleep(5 * time.Second)
+					time.Sleep(3 * time.Second)
 					return nil
 				}
 			},

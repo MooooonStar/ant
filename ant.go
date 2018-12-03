@@ -23,8 +23,8 @@ const (
 	StrategyLow        = "L"
 	StrategyHigh       = "H"
 	PendingOrdersLimit = 10
-	OrderLife          = 60 * time.Second
-	OrderConfirmedTime = 10 * time.Second
+	OrderLife          = 30 * time.Second
+	OrderConfirmedTime = 5 * time.Second
 )
 
 type Event struct {
@@ -70,8 +70,8 @@ func (ant *Ant) Trade(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			for trace, _ := range ant.exOrders {
+				fmt.Println("cancel order:", trace)
 				for i := 0; i < 3; i++ {
-					fmt.Println("cancel order:", trace)
 					OceanCancel(trace)
 					time.Sleep(100 * time.Millisecond)
 				}
@@ -79,43 +79,50 @@ func (ant *Ant) Trade(ctx context.Context) {
 			return
 		case e := <-ant.event:
 			v, _ := prettyjson.Marshal(e)
-			fmt.Println("profit found, ", string(v))
+			fmt.Printf("profit found, %s, %s/%s ", string(v), Who(e.Base), Who(e.Quote))
+			if WatchingMode {
+				continue
+			}
 
 			amount, _ := e.Amount.Float64()
 			price, _ := e.Price.Float64()
 			switch e.Category {
 			case StrategyLow:
 				exchangeOrder := UuidWithString(e.ID + OceanCore)
-				if _, err := OceanSell(price, amount, StrategyLow, e.Base, e.Quote, exchangeOrder); err == nil {
-					ant.exOrders[exchangeOrder] = true
-					select {
-					case <-ant.orderMatched:
-						delete(ant.exOrders, exchangeOrder)
-						otcOrder := UuidWithString(e.ID + ExinCore)
-						if _, err := ExinTrade(amount*price, e.Quote, e.Base, otcOrder); err == nil {
-							ant.otcOrders[otcOrder] = true
-						}
-					case <-time.After(OrderConfirmedTime):
-						for i := 0; i < 3; i++ {
-							OceanCancel(exchangeOrder)
-						}
+				if _, err := OceanSell(price, amount, OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
+					log.Error(err)
+					continue
+				}
+				ant.exOrders[exchangeOrder] = true
+				select {
+				case <-ant.orderMatched:
+					delete(ant.exOrders, exchangeOrder)
+					otcOrder := UuidWithString(e.ID + ExinCore)
+					if _, err := ExinTrade(amount*price, e.Quote, e.Base, otcOrder); err == nil {
+						ant.otcOrders[otcOrder] = true
+					}
+				case <-time.After(OrderConfirmedTime):
+					for i := 0; i < 3; i++ {
+						OceanCancel(exchangeOrder)
 					}
 				}
 			case StrategyHigh:
 				exchangeOrder := UuidWithString(e.ID + OceanCore)
-				if _, err := OceanBuy(price, amount*price, StrategyHigh, e.Base, e.Quote, exchangeOrder); err == nil {
-					ant.exOrders[exchangeOrder] = true
-					select {
-					case <-ant.orderMatched:
-						delete(ant.exOrders, exchangeOrder)
-						otcOrder := UuidWithString(e.ID + ExinCore)
-						if _, err := ExinTrade(amount, e.Base, e.Quote, otcOrder); err == nil {
-							ant.otcOrders[otcOrder] = true
-						}
-					case <-time.After(OrderConfirmedTime):
-						for i := 0; i < 3; i++ {
-							OceanCancel(exchangeOrder)
-						}
+				if _, err := OceanBuy(price, amount*price, OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
+					log.Error(err)
+					continue
+				}
+				ant.exOrders[exchangeOrder] = true
+				select {
+				case <-ant.orderMatched:
+					delete(ant.exOrders, exchangeOrder)
+					otcOrder := UuidWithString(e.ID + ExinCore)
+					if _, err := ExinTrade(amount, e.Base, e.Quote, otcOrder); err == nil {
+						ant.otcOrders[otcOrder] = true
+					}
+				case <-time.After(OrderConfirmedTime):
+					for i := 0; i < 3; i++ {
+						OceanCancel(exchangeOrder)
 					}
 				}
 			}
@@ -146,6 +153,7 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 }
 
 func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string) {
+	fmt.Println("order", exchange, otc)
 	bidPrice, price := exchange.Price, otc.Price
 	bidProfit := bidPrice.Sub(price).Div(price)
 	log.Debugf("bid -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, bidProfit, Who(base), Who(quote))
@@ -173,7 +181,6 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 }
 
 func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote string) {
-	fmt.Println("hi, ", exchange, otc)
 	askPrice, price := exchange.Price, otc.Price
 	askProfit := price.Sub(askPrice).Div(price)
 	log.Debugf("ask -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, askProfit, Who(base), Who(quote))

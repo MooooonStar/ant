@@ -35,12 +35,12 @@ func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
 	data, _ := GetExinDepth(ctx, BTC, USDT)
 	v, _ := prettyjson.Marshal(&data)
-	fmt.Println(string(v))
+	fmt.Println(string(v), "ifoo")
 }
 
 func TestOceanDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetOceanDepth(ctx, XIN, BTC)
+	data, _ := GetOceanDepth(ctx, BTC, USDT)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
 }
@@ -99,17 +99,15 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsHG/D/cnZkcEpnVRBA+6lcKhQrDgnuKAFu5M8IdN7SkU6dWaoU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
+	match := "hKFBsGIJVgm6i0IUtYnNDcHGzQihQrCDA1ErlVY6HJhhgmB0qGapoU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
 	var action TransferAction
 	action.Unpack(match)
-	assert.Equal(t, "MATCH", action.S)
+	fmt.Println(action.B)
+	fmt.Println(action.A)
 
-	cancel := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+wHP59AZJKQVGdKFg/A6sB2KFTpkNBTkNFTA=="
-	var transfer TransferAction
-	transfer.Unpack(cancel)
-	assert.Equal(t, "CANCEL", transfer.S)
-
-	fmt.Println(action, transfer)
+	var order OceanOrderAction
+	order.Unpack("hKFQqTM5OTMuOTk4NqFUoUyhQbDG0McoJiRCm44N2dGbZZL6oVOhQg==")
+	fmt.Println("order", order)
 }
 
 func TestReadAssets(t *testing.T) {

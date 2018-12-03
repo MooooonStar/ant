@@ -27,13 +27,13 @@ func GetExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
 		price := decimal.NewFromFloat(1.0).Div(order.Price)
 		order.Max = order.Max.Mul(price)
 		order.Min = order.Min.Mul(price)
-		order.Price = price
 		depth.Bids = []Order{*order}
 	}
 
 	if order, err := GetExinOrder(ctx, quote, base); err != nil {
 		return nil, err
 	} else {
+		order.Price = decimal.NewFromFloat(1.0).Div(order.Price)
 		depth.Asks = []Order{*order}
 	}
 	return &depth, nil
