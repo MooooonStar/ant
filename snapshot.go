@@ -90,9 +90,6 @@ func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 	const limit = 500
 	checkpoint := time.Now().UTC()
 	for {
-		if checkpoint.IsZero() {
-			checkpoint = time.Now().UTC()
-		}
 		snapshots, err := ex.requestMixinNetwork(ctx, checkpoint, limit)
 		if err != nil {
 			log.Println("PollMixinNetwork ERROR", err)
@@ -125,6 +122,7 @@ func (ex *Ant) ensureProcessSnapshot(ctx context.Context, s *Snapshot) {
 }
 
 func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
+	log.Println(s)
 	if s.OpponentId != OceanCore {
 		return nil
 	}

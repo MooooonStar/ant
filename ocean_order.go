@@ -13,13 +13,12 @@ import (
 )
 
 const (
-	Precision = 8
-
 	PageSideAsk     = "A"
 	PageSideBid     = "B"
 	OrderTypeLimit  = "L"
 	OrderTypeMarket = "M"
 
+	PricePrecision  = 8
 	AmountPrecision = 4
 	MaxPrice        = 1000000000
 	MaxAmount       = 5000000000
@@ -153,7 +152,7 @@ func OceanBuy(price, amount float64, category, base, quote string, trace ...stri
 	order := OceanOrderAction{
 		S: "B",
 		A: uuid.Must(uuid.FromString(base)),
-		P: number.FromFloat(price).Round(Precision).String(),
+		P: number.FromFloat(price).Round(PricePrecision).String(),
 		T: category,
 	}
 
@@ -168,7 +167,7 @@ func OceanBuy(price, amount float64, category, base, quote string, trace ...stri
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     quote,
 		RecipientId: OceanCore,
-		Amount:      number.FromFloat(amount).Round(Precision),
+		Amount:      number.FromFloat(amount).Round(AmountPrecision),
 		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
@@ -181,7 +180,7 @@ func OceanSell(price, amount float64, category, base, quote string, trace ...str
 	order := OceanOrderAction{
 		S: "A",
 		A: uuid.Must(uuid.FromString(quote)),
-		P: number.FromFloat(price).Round(Precision).String(),
+		P: number.FromFloat(price).Round(PricePrecision).String(),
 		T: category,
 	}
 
@@ -196,7 +195,7 @@ func OceanSell(price, amount float64, category, base, quote string, trace ...str
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     base,
 		RecipientId: OceanCore,
-		Amount:      number.FromFloat(amount),
+		Amount:      number.FromFloat(amount).Round(AmountPrecision),
 		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)

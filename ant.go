@@ -16,6 +16,8 @@ const (
 	ProfitThreshold = 0.1 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee        = 0.002
 	ExinFee         = 0.001
+	StrategyLow     = "L"
+	StrategyHigh    = "H"
 )
 
 type Event struct {
@@ -53,15 +55,15 @@ func (ant *Ant) Run() {
 			amount, _ := e.Amount.Float64()
 			price, _ := e.Price.Float64()
 			switch e.Category {
-			case "L":
+			case StrategyLow:
 				trace := UuidWithString(e.ID + ExinCore)
 				if _, err := ExinTrade(amount*price, e.Quote, e.Base, trace); err == nil {
 					trace := UuidWithString(e.ID + OceanCore)
-					OceanSell(price, amount, "L", e.Base, e.Quote, trace)
+					OceanSell(price, amount, StrategyLow, e.Base, e.Quote, trace)
 				}
-			case "H":
+			case StrategyHigh:
 				trace := UuidWithString(e.ID + OceanCore)
-				if _, err := OceanBuy(price, amount*price, "L", e.Base, e.Quote, trace); err == nil {
+				if _, err := OceanBuy(price, amount*price, StrategyHigh, e.Base, e.Quote, trace); err == nil {
 					trace := UuidWithString(e.ID + ExinCore)
 					ExinTrade(amount, e.Base, e.Quote, trace)
 				}
@@ -100,10 +102,10 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 		if amount.GreaterThanOrEqual(otc.Amount) {
 			amount = otc.Amount
 		}
-		id := UuidWithString(Who(base) + Who(quote) + bidPrice.String() + amount.String() + "L")
+		id := UuidWithString(Who(base) + Who(quote) + bidPrice.String() + amount.String() + StrategyLow)
 		ant.event <- Event{
 			ID:       id,
-			Category: "L",
+			Category: StrategyLow,
 			Price:    bidPrice,
 			Amount:   amount,
 			Profit:   bidProfit,
@@ -127,10 +129,10 @@ func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote strin
 		if amount.GreaterThanOrEqual(otc.Amount) {
 			amount = otc.Amount
 		}
-		id := UuidWithString(Who(base) + Who(quote) + askPrice.String() + amount.String() + "H")
+		id := UuidWithString(Who(base) + Who(quote) + askPrice.String() + amount.String() + StrategyHigh)
 		ant.event <- Event{
 			ID:       id,
-			Category: "H",
+			Category: StrategyHigh,
 			Price:    askPrice,
 			Amount:   amount,
 			Profit:   askProfit,
