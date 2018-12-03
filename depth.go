@@ -19,7 +19,7 @@ type Ticker struct {
 	Max   string `json:"maximum_amount"`
 }
 
-func (ant *Ant) GetExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
+func GetExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
 	var depth Depth
 	if order, err := GetExinOrder(ctx, base, quote); err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ type Depth struct {
 	Bids []Order `json:"bids"`
 }
 
-func (ant *Ant) GetOceanDepth(ctx context.Context, base, quote string) (*Depth, error) {
+func GetOceanDepth(ctx context.Context, base, quote string) (*Depth, error) {
 	url := "https://events.ocean.one/markets/" + fmt.Sprintf("%s-%s", base, quote) + "/book"
 	client := http.Client{
 		Timeout: 10 * time.Second,

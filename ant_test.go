@@ -15,8 +15,8 @@ func TestStrategyLow(t *testing.T) {
 	price := 4500.0
 	amount := 1.5 / price
 	base, quote := BTC, USDT
-	if _, err := ExinTrade(amount*price, quote, base); err == nil {
-		trace, err := OceanSell(price, amount, "L", base, quote)
+	if _, err := ExinTrade(fmt.Sprint(amount*price), quote, base); err == nil {
+		trace, err := OceanSell(fmt.Sprint(price), fmt.Sprint(amount), "L", base, quote)
 		fmt.Println(trace, err)
 	}
 }
@@ -25,9 +25,9 @@ func TestStrategyHigh(t *testing.T) {
 	price := 4500.0
 	amount := 1.5 / price
 	base, quote := BTC, USDT
-	if trace, err := OceanBuy(price, amount*price, "L", base, quote); err == nil {
+	if trace, err := OceanBuy(fmt.Sprint(price), fmt.Sprint(amount*price), "L", base, quote); err == nil {
 		fmt.Println(trace)
-		ExinTrade(amount, base, quote)
+		ExinTrade(fmt.Sprint(amount), base, quote)
 	}
 }
 
@@ -55,14 +55,14 @@ func TestOceanDepth(t *testing.T) {
 }
 
 func TestExinTrade(t *testing.T) {
-	amount := 1.0
+	amount := "1.0"
 	trace, err := ExinTrade(amount, USDT, EOS)
 	fmt.Println(trace, err)
 }
 
 func TestOceanTrade(t *testing.T) {
 	//OceanCore = F1exCore
-	price, amount := 2.8998, 0.3582
+	price, amount := "2.8998", "0.3582"
 	sellTrace, err := OceanSell(price, amount, "L", EOS, USDT)
 	assert.Nil(t, err)
 	fmt.Println("sellTrace: ", sellTrace)

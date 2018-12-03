@@ -177,7 +177,6 @@ func OceanBuy(price, amount, category, base, quote string, trace ...string) (str
 //if the category is "M", the price should be zero.
 func OceanSell(price, amount, category, base, quote string, trace ...string) (string, error) {
 	log.Infof("-----Sell %s at price %12.8s, amount %12.8s, type: %s", quote, price, amount, category)
-	return "", nil
 	order := OceanOrderAction{
 		S: "A",
 		A: uuid.Must(uuid.FromString(quote)),
