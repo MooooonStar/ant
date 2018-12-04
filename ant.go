@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	ProfitThreshold    = 0.02 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
+	ProfitThreshold    = 0.01 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	HuobiFee           = 0.001

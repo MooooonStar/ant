@@ -14,6 +14,9 @@ import (
 	"github.com/urfave/cli"
 )
 
+var baseSymbols = []string{"BTC", "EOS", "XIN"}
+var quoteSymbols = []string{"USDT", "BTC"}
+
 func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
@@ -45,16 +48,13 @@ func main() {
 				cli.StringFlag{Name: "trace,t"},
 			},
 			Action: func(c *cli.Context) error {
+				if trace := c.String("trace"); len(trace) > 0 {
+					return OceanCancel(trace)
+				}
 				snapshot := c.String("snapshot")
 				trace, err := ReadSnapshot(context.TODO(), snapshot)
 				if err != nil {
 					return err
-				}
-				if traceId := c.String("trace"); len(traceId) > 0 {
-					trace = traceId
-				}
-				if len(trace) == 0 {
-					return fmt.Errorf("snapshot or trace id is required.")
 				}
 				return OceanCancel(trace)
 			},
@@ -76,8 +76,6 @@ func main() {
 				if len(symbols) == 2 {
 					baseSymbol, quoteSymbol = symbols[0], symbols[1]
 				}
-				baseSymbols := []string{"BTC", "EOS", "XIN"}
-				quoteSymbols := []string{"USDT", "BTC"}
 
 				if len(baseSymbol) > 0 && len(quoteSymbol) > 0 {
 					baseSymbols = []string{baseSymbol}
