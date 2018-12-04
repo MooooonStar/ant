@@ -168,7 +168,7 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 	if bidProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
 		amount := exchange.Amount.Round(ExinAssetPrecision(quote))
 		if amount.LessThanOrEqual(otc.Min) {
-			log.Errorf("---amount is too small, %v <= %v , (precision %v:%v)", amount, otc.Min, Who(quote), ExinAssetPrecision(quote))
+			//log.Errorf("---amount is too small, %v <= %v , (precision %v:%v)", amount, otc.Min, Who(quote), ExinAssetPrecision(quote))
 			return
 		}
 		if amount.GreaterThanOrEqual(otc.Max) {
