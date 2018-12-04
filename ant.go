@@ -70,11 +70,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 			for trace, ok := range ant.exOrders {
 				if !ok {
 					log.Println("cancel order:", trace)
-					for i := 0; i < 3; i++ {
-						//连发三次，尽可能取消订单
-						OceanCancel(trace)
-						time.Sleep(100 * time.Millisecond)
-					}
+					OceanCancel(trace)
 				}
 			}
 			return
