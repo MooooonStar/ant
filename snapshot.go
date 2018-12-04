@@ -142,10 +142,10 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
-	if _, ok := ex.exOrders[order.B.String()]; ok {
+	if bidFinished, bidOK := ex.exOrders[order.B.String()]; bidOK && !bidFinished {
 		log.Println("++++order matched++++:", order)
 		ex.orderMatched <- true
-	} else if _, found := ex.exOrders[order.A.String()]; found {
+	} else if askFinished, askOK := ex.exOrders[order.A.String()]; askOK && askFinished {
 		log.Println("++++order matched++++:", order)
 		ex.orderMatched <- true
 	}

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	ProfitThreshold    = 0.001 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
+	ProfitThreshold    = 0.01 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	HuobiFee           = 0.001
@@ -69,11 +69,14 @@ func (ant *Ant) Trade(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			for trace, _ := range ant.exOrders {
-				fmt.Println("cancel order:", trace)
-				for i := 0; i < 3; i++ {
-					OceanCancel(trace)
-					time.Sleep(100 * time.Millisecond)
+			for trace, ok := range ant.exOrders {
+				if !ok {
+					fmt.Println("cancel order:", trace)
+					for i := 0; i < 3; i++ {
+						//连发三次，尽可能取消订单
+						OceanCancel(trace)
+						time.Sleep(100 * time.Millisecond)
+					}
 				}
 			}
 			return
@@ -83,18 +86,21 @@ func (ant *Ant) Trade(ctx context.Context) {
 			if !ant.Enabled {
 				continue
 			}
+			exchangeOrder := UuidWithString(e.ID + OceanCore)
+			if _, ok := ant.exOrders[exchangeOrder]; ok {
+				continue
+			}
 
 			switch e.Category {
 			case StrategyLow:
-				exchangeOrder := UuidWithString(e.ID + OceanCore)
 				if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 					log.Error(err)
 					continue
 				}
-				ant.exOrders[exchangeOrder] = true
+
+				ant.exOrders[exchangeOrder] = false
 				select {
 				case <-ant.orderMatched:
-					delete(ant.exOrders, exchangeOrder)
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					equalAmount := e.Price.Mul(e.Amount)
 					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err == nil {
@@ -103,19 +109,20 @@ func (ant *Ant) Trade(ctx context.Context) {
 				case <-time.After(OrderConfirmedTime):
 					for i := 0; i < 3; i++ {
 						OceanCancel(exchangeOrder)
+						time.Sleep(100 * time.Millisecond)
 					}
 				}
+				//无论是订单成交或者订单超时取消，都将状态置为true,防止订单成交但超时造成processSnapshot()死锁
+				ant.exOrders[exchangeOrder] = true
 			case StrategyHigh:
 				equalAmount := e.Amount.Mul(e.Price)
-				exchangeOrder := UuidWithString(e.ID + OceanCore)
 				if _, err := OceanBuy(e.Price.String(), equalAmount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 					log.Error(err)
 					continue
 				}
-				ant.exOrders[exchangeOrder] = true
+				ant.exOrders[exchangeOrder] = false
 				select {
 				case <-ant.orderMatched:
-					delete(ant.exOrders, exchangeOrder)
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					if _, err := ExinTrade(e.Amount.String(), e.Base, e.Quote, otcOrder); err == nil {
 						ant.otcOrders[otcOrder] = true
@@ -123,8 +130,10 @@ func (ant *Ant) Trade(ctx context.Context) {
 				case <-time.After(OrderConfirmedTime):
 					for i := 0; i < 3; i++ {
 						OceanCancel(exchangeOrder)
+						time.Sleep(100 * time.Millisecond)
 					}
 				}
+				ant.exOrders[exchangeOrder] = true
 			}
 		}
 	}
