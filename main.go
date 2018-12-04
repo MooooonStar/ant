@@ -65,9 +65,12 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "pair"},
 				cli.BoolFlag{Name: "enable"},
+				cli.BoolFlag{Name: "debug"},
 			},
 			Action: func(c *cli.Context) error {
-				log.SetLevel(log.InfoLevel)
+				if debug := c.Bool("debug"); debug {
+					log.SetLevel(log.DebugLevel)
+				}
 
 				pair := c.String("pair")
 				enabled := c.Bool("enable")
