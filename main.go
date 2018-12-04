@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hokaccha/go-prettyjson"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )

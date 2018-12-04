@@ -3,26 +3,23 @@ package main
 import (
 	"context"
 	"crypto/md5"
-	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/hokaccha/go-prettyjson"
-
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	ProfitThreshold    = 0.01 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
+	ProfitThreshold    = 0.02 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	HuobiFee           = 0.001
 	StrategyLow        = "L"
 	StrategyHigh       = "H"
-	PendingOrdersLimit = 10
-	OrderLife          = 30 * time.Second
 	OrderConfirmedTime = 10 * time.Second
 )
 
@@ -43,6 +40,7 @@ type Ant struct {
 	otcOrders    map[string]bool
 	orderMatched chan bool
 	Enabled      bool
+	lock         sync.Mutex
 }
 
 func NewAnt(enabled bool) *Ant {
@@ -71,7 +69,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 		case <-ctx.Done():
 			for trace, ok := range ant.exOrders {
 				if !ok {
-					fmt.Println("cancel order:", trace)
+					log.Println("cancel order:", trace)
 					for i := 0; i < 3; i++ {
 						//连发三次，尽可能取消订单
 						OceanCancel(trace)
@@ -90,7 +88,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 			}
 
 			v, _ := prettyjson.Marshal(e)
-			fmt.Printf("profit found, %s, %s/%s ", string(v), Who(e.Base), Who(e.Quote))
+			log.Printf("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
 
 			ant.exOrders[exchangeOrder] = false
 			switch e.Category {
@@ -102,13 +100,16 @@ func (ant *Ant) Trade(ctx context.Context) {
 
 				select {
 				case <-ant.orderMatched:
-					fmt.Println("+++orders matched:")
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					equalAmount := e.Price.Mul(e.Amount)
 					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err == nil {
 						ant.otcOrders[otcOrder] = true
 					}
+					ant.exOrders[exchangeOrder] = true
 				case <-time.After(OrderConfirmedTime):
+					ant.lock.Lock()
+					ant.exOrders[exchangeOrder] = true
+					ant.lock.Unlock()
 					for i := 0; i < 3; i++ {
 						OceanCancel(exchangeOrder)
 						time.Sleep(100 * time.Millisecond)
@@ -123,19 +124,21 @@ func (ant *Ant) Trade(ctx context.Context) {
 
 				select {
 				case <-ant.orderMatched:
+					ant.exOrders[exchangeOrder] = true
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					if _, err := ExinTrade(e.Amount.String(), e.Base, e.Quote, otcOrder); err == nil {
 						ant.otcOrders[otcOrder] = true
 					}
 				case <-time.After(OrderConfirmedTime):
+					ant.lock.Lock()
+					ant.exOrders[exchangeOrder] = true
+					ant.lock.Unlock()
 					for i := 0; i < 3; i++ {
 						OceanCancel(exchangeOrder)
 						time.Sleep(100 * time.Millisecond)
 					}
 				}
 			}
-			//无论是订单成交或者订单超时取消，都将状态置为true,防止订单成交但超时造成processSnapshot()死锁
-			ant.exOrders[exchangeOrder] = true
 		}
 	}
 }

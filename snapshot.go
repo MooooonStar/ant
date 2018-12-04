@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 )
 
@@ -126,34 +126,35 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
+	if s.Asset.AssetId == CNB {
+		return nil
+	}
+
 	var order TransferAction
 	if err := order.Unpack(s.Data); err != nil {
 		return err
 	}
 
 	v0, _ := prettyjson.Marshal(s)
-	fmt.Println("find snapshot.", string(v0))
+	log.Println("find snapshot.", string(v0))
 
 	if order.S != "MATCH" {
 		return nil
 	}
 
 	v, _ := prettyjson.Marshal(order)
-	fmt.Println("---orders matched:", ex.exOrders, string(v))
+	log.Println("---orders matched:", ex.exOrders, string(v))
 
+	ex.lock.Lock()
+	defer ex.lock.Unlock()
 	if bidFinished, bidOK := ex.exOrders[order.B.String()]; bidOK {
 		if !bidFinished {
-			log.Println("++++order matched++++:", order)
 			ex.orderMatched <- true
 		}
 	} else if askFinished, askOK := ex.exOrders[order.A.String()]; askOK {
 		if !askFinished {
-			log.Println("++++order matched++++:", order)
 			ex.orderMatched <- true
 		}
-	} else {
-		log.Printf("info %v, %v,%v, %v", bidFinished, bidOK, askFinished, askOK)
 	}
-
 	return nil
 }
