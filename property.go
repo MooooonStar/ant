@@ -5,10 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/jinzhu/gorm"
 )
+
+type Wallet struct {
+	ID        uint      `gorm:"primary_key"       json:"-"`
+	CreatedAt time.Time `gorm:"created_at"        json:"time"`
+	BTC       string    `gorm:"type:varchar(20);" json:"BTC"`
+	ETH       string    `gorm:"type:varchar(20);" json:"ETH"`
+	EOS       string    `gorm:"type:varchar(20);" json:"EOS"`
+	XIN       string    `gorm:"type:varchar(20);" json:"XIN"`
+	USDT      string    `gorm:"type:varchar(20);" json:"USDT"`
+}
 
 func ReadAssets(ctx context.Context) (map[string]string, error) {
 	uri := "/assets"
@@ -78,4 +90,25 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 	fmt.Println("snapshot info:", string(v))
 
 	return resp.Data.TraceId, nil
+}
+
+func SaveProperty(ctx context.Context, db *gorm.DB) error {
+	assets, err := ReadAssets(context.TODO())
+	if err != nil {
+		return err
+	}
+	balance := make(map[string]string, 0)
+	for asset, amount := range assets {
+		balance[Who(asset)] = amount
+	}
+	bt, err := json.Marshal(balance)
+	if err != nil {
+		return err
+	}
+	var wallet Wallet
+	err = json.Unmarshal(bt, &wallet)
+	if err != nil {
+		return err
+	}
+	return db.Create(&wallet).Error
 }

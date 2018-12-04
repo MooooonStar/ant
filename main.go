@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -86,6 +88,13 @@ func main() {
 				}
 
 				ctx := context.Background()
+				db, err := gorm.Open("mysql", "root:@/snow")
+				if err != nil {
+					panic(err)
+				}
+				db.AutoMigrate(&Wallet{})
+				SaveProperty(ctx, db)
+
 				subctx, cancel := context.WithCancel(ctx)
 				ant := NewAnt(enabled)
 				go ant.PollMixinNetwork(subctx)
@@ -101,6 +110,7 @@ func main() {
 				case <-sig:
 					fmt.Println("cancel orders in 3 seconds.")
 					cancel()
+					SaveProperty(ctx, db)
 					time.Sleep(3 * time.Second)
 					return nil
 				}
