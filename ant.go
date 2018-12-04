@@ -81,8 +81,6 @@ func (ant *Ant) Trade(ctx context.Context) {
 			}
 			return
 		case e := <-ant.event:
-			v, _ := prettyjson.Marshal(e)
-			fmt.Printf("profit found, %s, %s/%s ", string(v), Who(e.Base), Who(e.Quote))
 			if !ant.Enabled {
 				continue
 			}
@@ -91,6 +89,10 @@ func (ant *Ant) Trade(ctx context.Context) {
 				continue
 			}
 
+			v, _ := prettyjson.Marshal(e)
+			fmt.Printf("profit found, %s, %s/%s ", string(v), Who(e.Base), Who(e.Quote))
+
+			ant.exOrders[exchangeOrder] = false
 			switch e.Category {
 			case StrategyLow:
 				if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
@@ -98,7 +100,6 @@ func (ant *Ant) Trade(ctx context.Context) {
 					continue
 				}
 
-				ant.exOrders[exchangeOrder] = false
 				select {
 				case <-ant.orderMatched:
 					fmt.Println("+++orders matched:")
@@ -107,21 +108,19 @@ func (ant *Ant) Trade(ctx context.Context) {
 					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err == nil {
 						ant.otcOrders[otcOrder] = true
 					}
-					// case <-time.After(OrderConfirmedTime):
-					// 	for i := 0; i < 3; i++ {
-					// 		OceanCancel(exchangeOrder)
-					// 		time.Sleep(100 * time.Millisecond)
-					// 	}
+				case <-time.After(OrderConfirmedTime):
+					for i := 0; i < 3; i++ {
+						OceanCancel(exchangeOrder)
+						time.Sleep(100 * time.Millisecond)
+					}
 				}
-				//无论是订单成交或者订单超时取消，都将状态置为true,防止订单成交但超时造成processSnapshot()死锁
-				ant.exOrders[exchangeOrder] = true
 			case StrategyHigh:
 				equalAmount := e.Amount.Mul(e.Price)
 				if _, err := OceanBuy(e.Price.String(), equalAmount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 					log.Error(err)
 					continue
 				}
-				ant.exOrders[exchangeOrder] = false
+
 				select {
 				case <-ant.orderMatched:
 					otcOrder := UuidWithString(e.ID + ExinCore)
@@ -134,8 +133,9 @@ func (ant *Ant) Trade(ctx context.Context) {
 						time.Sleep(100 * time.Millisecond)
 					}
 				}
-				ant.exOrders[exchangeOrder] = true
 			}
+			//无论是订单成交或者订单超时取消，都将状态置为true,防止订单成交但超时造成processSnapshot()死锁
+			ant.exOrders[exchangeOrder] = true
 		}
 	}
 }

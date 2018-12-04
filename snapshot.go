@@ -141,14 +141,18 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	v, _ := prettyjson.Marshal(order)
 	fmt.Println("---orders matched:", ex.exOrders, string(v))
 
-	//ex.orderMatched <- true
-
-	if bidFinished, bidOK := ex.exOrders[order.B.String()]; bidOK && !bidFinished {
-		log.Println("++++order matched++++:", order)
-		ex.orderMatched <- true
-	} else if askFinished, askOK := ex.exOrders[order.A.String()]; askOK && askFinished {
-		log.Println("++++order matched++++:", order)
-		ex.orderMatched <- true
+	if bidFinished, bidOK := ex.exOrders[order.B.String()]; bidOK {
+		if !bidFinished {
+			log.Println("++++order matched++++:", order)
+			ex.orderMatched <- true
+		}
+	} else if askFinished, askOK := ex.exOrders[order.A.String()]; askOK {
+		if !askFinished {
+			log.Println("++++order matched++++:", order)
+			ex.orderMatched <- true
+		}
+	} else {
+		log.Printf("info %v, %v,%v, %v", bidFinished, bidOK, askFinished, askOK)
 	}
 
 	return nil
