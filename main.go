@@ -29,7 +29,11 @@ func main() {
 				if err != nil {
 					return err
 				}
-				v, _ := prettyjson.Marshal(assets)
+				balance := make(map[string]string, 0)
+				for asset, amount := range assets {
+					balance[Who(asset)] = amount
+				}
+				v, _ := prettyjson.Marshal(balance)
 				fmt.Println(string(v))
 				return nil
 			},
