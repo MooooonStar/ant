@@ -22,8 +22,8 @@ func main() {
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
 		{
-			Name:  "info",
-			Usage: "show assets",
+			Name:  "balance",
+			Usage: "show balance",
 			Action: func(c *cli.Context) error {
 				assets, err := ReadAssets(context.TODO())
 				if err != nil {
@@ -65,11 +65,13 @@ func main() {
 			Usage: "find profits between different exchanges",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "pair"},
+				cli.BoolFlag{Name: "enable"},
 			},
 			Action: func(c *cli.Context) error {
 				log.SetLevel(log.DebugLevel)
 
 				pair := c.String("pair")
+				enabled := c.Bool("enable")
 				symbols := strings.Split(pair, "/")
 				var baseSymbol, quoteSymbol string
 				if len(symbols) == 2 {
@@ -85,7 +87,7 @@ func main() {
 
 				ctx := context.Background()
 				subctx, cancel := context.WithCancel(ctx)
-				ant := NewAnt()
+				ant := NewAnt(enabled)
 				go ant.PollMixinNetwork(subctx)
 				for _, baseSymbol := range baseSymbols {
 					for _, quoteSymbol := range quoteSymbols {

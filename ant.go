@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	WatchingMode       = false
 	ProfitThreshold    = 0.001 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
@@ -43,15 +42,17 @@ type Ant struct {
 	exOrders     map[string]bool
 	otcOrders    map[string]bool
 	orderMatched chan bool
+	Enabled      bool
 }
 
-func NewAnt() *Ant {
+func NewAnt(enabled bool) *Ant {
 	return &Ant{
 		event:        make(chan Event, 0),
 		snapshots:    make(map[string]bool, 0),
 		exOrders:     make(map[string]bool, 0),
 		otcOrders:    make(map[string]bool, 0),
 		orderMatched: make(chan bool, 0),
+		Enabled:      enabled,
 	}
 }
 
@@ -79,7 +80,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 		case e := <-ant.event:
 			v, _ := prettyjson.Marshal(e)
 			fmt.Printf("profit found, %s, %s/%s ", string(v), Who(e.Base), Who(e.Quote))
-			if WatchingMode {
+			if !ant.Enabled {
 				continue
 			}
 

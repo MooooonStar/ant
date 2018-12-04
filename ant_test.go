@@ -33,7 +33,7 @@ func TestStrategyHigh(t *testing.T) {
 
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetExinDepth(ctx, BTC, USDT)
+	data, _ := GetExinDepth(ctx, EOS, USDT)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
 
@@ -55,14 +55,14 @@ func TestOceanDepth(t *testing.T) {
 }
 
 func TestExinTrade(t *testing.T) {
-	price, amount := 0.00088835, 0.1214
-	trace, err := ExinTrade(fmt.Sprint(price*amount), BTC, EOS)
+	price, amount := 0.0193, 0.11
+	trace, err := ExinTrade(fmt.Sprint(price*amount), XIN, BTC)
 	fmt.Println(trace, err)
 }
 
 func TestOceanTrade(t *testing.T) {
 	//OceanCore = F1exCore
-	price, amount := "2.8998", "0.3582"
+	price, amount := "0.0193", "0.11"
 	sellTrace, err := OceanSell(price, amount, "L", EOS, USDT)
 	assert.Nil(t, err)
 	fmt.Println("sellTrace: ", sellTrace)
