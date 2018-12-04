@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/shopspring/decimal"
-
 	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,7 +55,7 @@ func TestOceanDepth(t *testing.T) {
 
 func TestExinTrade(t *testing.T) {
 	//price, amount := 3936.6133, 0.0003
-	trace, err := ExinTrade("0.0003", BTC, USDT)
+	trace, err := ExinTrade("0.0008", BTC, EOS)
 	fmt.Println(trace, err)
 }
 
@@ -83,29 +82,32 @@ func TestUUIDl(t *testing.T) {
 	//OceanCore = F1exCore
 	e := Event{
 		Category: "L",
-		Base:     XIN,
-		Quote:    USDT,
-		Price:    decimal.NewFromFloat(550.0),
-		Amount:   decimal.NewFromFloat(0.01),
+		Base:     EOS,
+		Quote:    BTC,
+		Price:    decimal.NewFromFloat(0.00087878),
+		Amount:   decimal.NewFromFloat(0.1629),
 	}
 	id := UuidWithString(Who(e.Base) + Who(e.Quote) + e.Price.String() + e.Amount.String() + "L")
 	fmt.Println(id)
 
-	e = Event{
-		Category: "L",
-		Base:     XIN,
-		Quote:    USDT,
-		Price:    decimal.NewFromFloat(550.0),
-		Amount:   decimal.NewFromFloat(0.011),
-	}
-	id = UuidWithString(Who(e.Base) + Who(e.Quote) + e.Price.String() + e.Amount.String() + "L")
-	fmt.Println(id)
-
-	id1 := UuidWithString(id + ExinCore)
-	fmt.Println(id1)
-
 	id2 := UuidWithString(id + OceanCore)
 	fmt.Println(id2)
+
+	// e = Event{
+	// 	Category: "L",
+	// 	Base:     XIN,
+	// 	Quote:    USDT,
+	// 	Price:    decimal.NewFromFloat(550.0),
+	// 	Amount:   decimal.NewFromFloat(0.011),
+	// }
+	// id = UuidWithString(Who(e.Base) + Who(e.Quote) + e.Price.String() + e.Amount.String() + "L")
+	// fmt.Println(id)
+
+	// id1 := UuidWithString(id + ExinCore)
+	// fmt.Println(id1)
+
+	// id2 := UuidWithString(id + OceanCore)
+	// fmt.Println(id2)
 }
 
 func TestOrderMemo(t *testing.T) {

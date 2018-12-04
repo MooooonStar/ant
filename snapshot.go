@@ -9,9 +9,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
-
 	bot "github.com/MixinNetwork/bot-api-go-client"
+	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/ugorji/go/codec"
 )
@@ -140,7 +139,7 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	}
 
 	v, _ := prettyjson.Marshal(order)
-	fmt.Println("orders matched:", ex.exOrders, string(v))
+	fmt.Println("---orders matched:", ex.exOrders, string(v))
 
 	//ex.orderMatched <- true
 

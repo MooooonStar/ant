@@ -101,16 +101,17 @@ func (ant *Ant) Trade(ctx context.Context) {
 				ant.exOrders[exchangeOrder] = false
 				select {
 				case <-ant.orderMatched:
+					fmt.Println("+++orders matched:")
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					equalAmount := e.Price.Mul(e.Amount)
 					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err == nil {
 						ant.otcOrders[otcOrder] = true
 					}
-				case <-time.After(OrderConfirmedTime):
-					for i := 0; i < 3; i++ {
-						OceanCancel(exchangeOrder)
-						time.Sleep(100 * time.Millisecond)
-					}
+					// case <-time.After(OrderConfirmedTime):
+					// 	for i := 0; i < 3; i++ {
+					// 		OceanCancel(exchangeOrder)
+					// 		time.Sleep(100 * time.Millisecond)
+					// 	}
 				}
 				//无论是订单成交或者订单超时取消，都将状态置为true,防止订单成交但超时造成processSnapshot()死锁
 				ant.exOrders[exchangeOrder] = true

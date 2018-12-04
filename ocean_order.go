@@ -191,7 +191,7 @@ func OceanSell(price, amount, category, base, quote string, trace ...string) (st
 	}
 
 	traceId := uuid.Must(uuid.NewV4()).String()
-	if len(traceId) == 1 {
+	if len(trace) == 1 {
 		traceId = trace[0]
 	}
 

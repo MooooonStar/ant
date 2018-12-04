@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log"
 
 	"github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
-	"github.com/vmihailenco/msgpack"
-
 	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
+	"github.com/vmihailenco/msgpack"
 )
 
 const (
@@ -39,6 +38,7 @@ func (order *ExinOrderAction) Unpack(memo string) error {
 }
 
 func ExinTrade(amount, send, get string, trace ...string) (string, error) {
+	log.Infof("trace in exin, %s, send %s, get %s", amount, Who(send), Who(get))
 	traceId := uuid.Must(uuid.NewV4()).String()
 	if len(trace) == 1 {
 		traceId = trace[0]
