@@ -55,8 +55,8 @@ func TestOceanDepth(t *testing.T) {
 }
 
 func TestExinTrade(t *testing.T) {
-	amount := "1.0"
-	trace, err := ExinTrade(amount, USDT, EOS)
+	price, amount := 0.00088835, 0.1214
+	trace, err := ExinTrade(fmt.Sprint(price*amount), BTC, EOS)
 	fmt.Println(trace, err)
 }
 

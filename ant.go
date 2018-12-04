@@ -16,9 +16,10 @@ import (
 
 const (
 	WatchingMode       = false
-	ProfitThreshold    = 0.001 / (1 - OceanFee) / (1 - ExinFee)
+	ProfitThreshold    = 0.001 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
 	OceanFee           = 0.002
 	ExinFee            = 0.001
+	HuobiFee           = 0.001
 	StrategyLow        = "L"
 	StrategyHigh       = "H"
 	PendingOrdersLimit = 10
@@ -104,7 +105,6 @@ func (ant *Ant) Trade(ctx context.Context) {
 					}
 				}
 			case StrategyHigh:
-				fmt.Println("-----amount", e.Amount.String())
 				equalAmount := e.Amount.Mul(e.Price)
 				exchangeOrder := UuidWithString(e.ID + OceanCore)
 				if _, err := OceanBuy(e.Price.String(), equalAmount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
@@ -156,14 +156,15 @@ func (ant *Ant) Low(ctx context.Context, exchange, otc Order, base, quote string
 	bidProfit := bidPrice.Sub(price).Div(price)
 	log.Debugf("bid -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, bidProfit, Who(base), Who(quote))
 	if bidProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
-		if exchange.Amount.LessThanOrEqual(otc.Min) {
-			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
-			return
-		}
-		amount := exchange.Amount
+		amount := exchange.Amount.Round(ExinAssetPrecision(quote))
+		// if amount.LessThanOrEqual(otc.Min) {
+		// 	log.Errorf("---amount is too small, %v <= %v , (precision %v:%v)", amount, otc.Min, Who(quote), ExinAssetPrecision(quote))
+		// 	return
+		// }
 		if amount.GreaterThanOrEqual(otc.Max) {
 			amount = otc.Max
 		}
+
 		id := UuidWithString(Who(base) + Who(quote) + bidPrice.String() + amount.String() + StrategyLow)
 		ant.event <- Event{
 			ID:       id,
@@ -183,11 +184,12 @@ func (ant *Ant) High(ctx context.Context, exchange, otc Order, base, quote strin
 	askProfit := price.Sub(askPrice).Div(price)
 	log.Debugf("ask -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, askProfit, Who(base), Who(quote))
 	if askProfit.GreaterThan(decimal.NewFromFloat(ProfitThreshold)) {
+		log.Debug("++precision", ExinAssetPrecision(quote), Who(base))
+		amount := exchange.Amount.Round(ExinAssetPrecision(base))
 		if exchange.Amount.LessThanOrEqual(otc.Min) {
-			log.Errorf("amount is too small, %v <= %v", exchange.Amount, otc.Min)
+			log.Errorf("+++amount is too small, %v <= %v,  (min amount %v:%v)", exchange.Amount, otc.Min, Who(base), ExinAssetPrecision(base))
 			return
 		}
-		amount := exchange.Amount
 		if amount.GreaterThanOrEqual(otc.Max) {
 			amount = otc.Max
 		}

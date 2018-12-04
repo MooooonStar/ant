@@ -1,7 +1,7 @@
 package main
 
 const (
-	ClientId     = "3169b30b-885f-4d6d-aafd-f59bdd49436e"
+	ClientId     = "3169b30b-885f-4d6d-aafd-f59bdd49436f"
 	ClientSecret = "c087d9c4c277c8dfab66eb7d621b74a9f3f86c3e259885fd51e7c95ecdb9d468"
 	PinCode      = "621304"
 	SessionId    = "37116f40-bcfe-45dc-9734-1638aed5f016"

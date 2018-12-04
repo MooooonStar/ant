@@ -123,7 +123,7 @@ func (ex *Ant) ensureProcessSnapshot(ctx context.Context, s *Snapshot) {
 }
 
 func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
-	if len(s.OpponentId) == 0 || len(s.UserId) == 0 {
+	if len(s.OpponentId) == 0 || len(s.Data) == 0 {
 		return nil
 	}
 

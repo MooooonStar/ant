@@ -47,18 +47,19 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 		A: uuid.Must(uuid.FromString(get)),
 	}
 
-	precision := AssetPrecision(send)
+	precision := ExinAssetPrecision(send)
+	a := number.FromString(amount).Round(precision)
 	transfer := bot.TransferInput{
 		AssetId:     send,
 		RecipientId: ExinCore,
-		Amount:      number.FromString(amount).Round(precision),
+		Amount:      a,
 		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}
 	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
-func AssetPrecision(assetId string) int32 {
+func ExinAssetPrecision(assetId string) int32 {
 	switch assetId {
 	case XIN:
 		return 4

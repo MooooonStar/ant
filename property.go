@@ -37,7 +37,7 @@ func ReadAssets(ctx context.Context) (map[string]string, error) {
 
 	assets := make(map[string]string, 0)
 	for _, item := range resp.Data {
-		assets[Who(item.AssetId)] = item.Balance
+		assets[item.AssetId] = item.Balance
 	}
 	return assets, nil
 }
