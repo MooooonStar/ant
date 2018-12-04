@@ -71,8 +71,8 @@ func main() {
 				if len(symbols) == 2 {
 					baseSymbol, quoteSymbol = symbols[0], symbols[1]
 				}
-				baseSymbols := []string{"BTC", "EOS", "XIN", "ETH"}
-				quoteSymbols := []string{"USDT", "XIN", "BTC"}
+				baseSymbols := []string{"BTC", "EOS", "XIN"}
+				quoteSymbols := []string{"USDT", "BTC"}
 
 				if len(baseSymbol) > 0 && len(quoteSymbol) > 0 {
 					baseSymbols = []string{baseSymbol}
