@@ -164,6 +164,8 @@ func OceanBuy(price, amount, category, base, quote string, trace ...string) (str
 	if len(trace) == 1 {
 		traceId = trace[0]
 	}
+	log.Infof("-----buy trace ----%s", traceId)
+
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     quote,
 		RecipientId: OceanCore,
@@ -192,6 +194,8 @@ func OceanSell(price, amount, category, base, quote string, trace ...string) (st
 	if len(traceId) == 1 {
 		traceId = trace[0]
 	}
+
+	log.Infof("-----Sell trace ----%s", traceId)
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     base,
 		RecipientId: OceanCore,
@@ -203,7 +207,7 @@ func OceanSell(price, amount, category, base, quote string, trace ...string) (st
 }
 
 func OceanCancel(trace string) error {
-	log.Debugf("*****Cancel : %v", trace)
+	log.Infof("*****Cancel : %v", trace)
 	order := OceanOrderAction{
 		O: uuid.Must(uuid.FromString(trace)),
 	}

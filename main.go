@@ -68,7 +68,7 @@ func main() {
 				cli.BoolFlag{Name: "enable"},
 			},
 			Action: func(c *cli.Context) error {
-				log.SetLevel(log.DebugLevel)
+				log.SetLevel(log.InfoLevel)
 
 				pair := c.String("pair")
 				enabled := c.Bool("enable")

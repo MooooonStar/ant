@@ -55,8 +55,8 @@ func TestOceanDepth(t *testing.T) {
 }
 
 func TestExinTrade(t *testing.T) {
-	price, amount := 0.0193, 0.11
-	trace, err := ExinTrade(fmt.Sprint(price*amount), XIN, BTC)
+	//price, amount := 3936.6133, 0.0003
+	trace, err := ExinTrade("0.0003", BTC, USDT)
 	fmt.Println(trace, err)
 }
 
@@ -75,7 +75,7 @@ func TestOceanTrade(t *testing.T) {
 //51f73f1f-212e-48cd-b990-b5819716f8f7
 func TestOceanCancel(t *testing.T) {
 	//OceanCore = F1exCore
-	err := OceanCancel("51f73f1f-212e-48cd-b990-b5819716f8f7")
+	err := OceanCancel("53a6e3fc-5e69-3408-a4fc-fd666b967693")
 	fmt.Println(err)
 }
 

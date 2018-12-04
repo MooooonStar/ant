@@ -135,12 +135,14 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	v0, _ := prettyjson.Marshal(s)
 	fmt.Println("find snapshot.", string(v0))
 
-	v, _ := prettyjson.Marshal(order)
-	fmt.Println("find order.", string(v))
-
-	if order.B == uuid.Nil {
+	if order.S != "MATCH" {
 		return nil
 	}
+
+	v, _ := prettyjson.Marshal(order)
+	fmt.Println("orders matched:", ex.exOrders, string(v))
+
+	//ex.orderMatched <- true
 
 	if bidFinished, bidOK := ex.exOrders[order.B.String()]; bidOK && !bidFinished {
 		log.Println("++++order matched++++:", order)
