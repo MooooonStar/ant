@@ -34,23 +34,21 @@ type Event struct {
 }
 
 type Ant struct {
-	event        chan Event
-	snapshots    map[string]bool
-	exOrders     map[string]bool
-	otcOrders    map[string]bool
-	orderMatched chan bool
-	Enabled      bool
-	lock         sync.Mutex
+	event         chan Event
+	snapshots     map[string]bool
+	exOrders      map[string]bool
+	matchedAmount chan decimal.Decimal
+	Enabled       bool
+	lock          sync.Mutex
 }
 
 func NewAnt(enabled bool) *Ant {
 	return &Ant{
-		event:        make(chan Event, 0),
-		snapshots:    make(map[string]bool, 0),
-		exOrders:     make(map[string]bool, 0),
-		otcOrders:    make(map[string]bool, 0),
-		orderMatched: make(chan bool, 0),
-		Enabled:      enabled,
+		event:         make(chan Event, 0),
+		snapshots:     make(map[string]bool, 0),
+		exOrders:      make(map[string]bool, 0),
+		matchedAmount: make(chan decimal.Decimal, 0),
+		Enabled:       enabled,
 	}
 }
 
@@ -69,7 +67,6 @@ func (ant *Ant) Trade(ctx context.Context) {
 		case <-ctx.Done():
 			for trace, ok := range ant.exOrders {
 				if !ok {
-					log.Println("cancel order:", trace)
 					OceanCancel(trace)
 				}
 			}
@@ -86,7 +83,10 @@ func (ant *Ant) Trade(ctx context.Context) {
 			v, _ := prettyjson.Marshal(e)
 			log.Printf("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
 
+			ant.lock.Lock()
 			ant.exOrders[exchangeOrder] = false
+			ant.lock.Unlock()
+
 			switch e.Category {
 			case StrategyLow:
 				if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
@@ -95,21 +95,13 @@ func (ant *Ant) Trade(ctx context.Context) {
 				}
 
 				select {
-				case <-ant.orderMatched:
+				case amount := <-ant.matchedAmount:
 					otcOrder := UuidWithString(e.ID + ExinCore)
-					equalAmount := e.Price.Mul(e.Amount)
-					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err == nil {
-						ant.otcOrders[otcOrder] = true
+					equalAmount := e.Price.Mul(amount)
+					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err != nil {
+						log.Error(err)
 					}
-					ant.exOrders[exchangeOrder] = true
 				case <-time.After(OrderConfirmedTime):
-					ant.lock.Lock()
-					ant.exOrders[exchangeOrder] = true
-					ant.lock.Unlock()
-					for i := 0; i < 3; i++ {
-						OceanCancel(exchangeOrder)
-						time.Sleep(100 * time.Millisecond)
-					}
 				}
 			case StrategyHigh:
 				equalAmount := e.Amount.Mul(e.Price)
@@ -119,22 +111,19 @@ func (ant *Ant) Trade(ctx context.Context) {
 				}
 
 				select {
-				case <-ant.orderMatched:
+				case amount := <-ant.matchedAmount:
 					ant.exOrders[exchangeOrder] = true
 					otcOrder := UuidWithString(e.ID + ExinCore)
-					if _, err := ExinTrade(e.Amount.String(), e.Base, e.Quote, otcOrder); err == nil {
-						ant.otcOrders[otcOrder] = true
+					if _, err := ExinTrade(amount.String(), e.Base, e.Quote, otcOrder); err != nil {
+						log.Error(err)
 					}
 				case <-time.After(OrderConfirmedTime):
-					ant.lock.Lock()
-					ant.exOrders[exchangeOrder] = true
-					ant.lock.Unlock()
-					for i := 0; i < 3; i++ {
-						OceanCancel(exchangeOrder)
-						time.Sleep(100 * time.Millisecond)
-					}
 				}
 			}
+			ant.lock.Lock()
+			ant.exOrders[exchangeOrder] = true
+			ant.lock.Unlock()
+			OceanCancel(exchangeOrder)
 		}
 	}
 }

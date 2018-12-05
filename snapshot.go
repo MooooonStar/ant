@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
@@ -142,6 +144,8 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
+	amount, _ := decimal.NewFromString(s.Amount)
+
 	v, _ := prettyjson.Marshal(order)
 	log.Println("---orders matched:", ex.exOrders, string(v))
 
@@ -149,11 +153,11 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	defer ex.lock.Unlock()
 	if bidFinished, bidOK := ex.exOrders[order.B.String()]; bidOK {
 		if !bidFinished {
-			ex.orderMatched <- true
+			ex.matchedAmount <- amount
 		}
 	} else if askFinished, askOK := ex.exOrders[order.A.String()]; askOK {
 		if !askFinished {
-			ex.orderMatched <- true
+			ex.matchedAmount <- amount
 		}
 	}
 	return nil
