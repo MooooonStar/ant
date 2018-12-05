@@ -103,8 +103,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 					}
 
 					otcOrder := UuidWithString(e.ID + ExinCore)
-					equalAmount := e.Price.Mul(amount)
-					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err != nil {
+					if _, err := ExinTrade(amount.String(), e.Quote, e.Base, otcOrder); err != nil {
 						log.Error(err)
 					}
 				case <-time.After(OrderConfirmedTime):

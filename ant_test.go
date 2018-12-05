@@ -111,14 +111,14 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsGIJVgm6i0IUtYnNDcHGzQihQrCDA1ErlVY6HJhhgmB0qGapoU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
-	var action TransferAction
-	action.Unpack(match)
-	fmt.Println(action.B)
-	fmt.Println(action.A)
+	// match := "hKFBsGIJVgm6i0IUtYnNDcHGzQihQrCDA1ErlVY6HJhhgmB0qGapoU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
+	// var action TransferAction
+	// action.Unpack(match)
+	// fmt.Println(action.B)
+	// fmt.Println(action.A)
 
 	var order OceanOrderAction
-	order.Unpack("hKFQqTM5OTMuOTk4NqFUoUyhQbDG0McoJiRCm44N2dGbZZL6oVOhQg==")
+	order.Unpack("hKFToUKhUKkzODA5Ljg3ODahVKFMoUGwxtDHKCYkQpuODdnRm2WS+g==")
 	fmt.Println("order", order)
 }
 
