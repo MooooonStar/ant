@@ -49,7 +49,7 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	precision := ExinAssetPrecision(send)
 	a := number.FromString(amount).Round(precision)
 
-	log.Infof("trade in exin, %s, send %s, get %s", amount, Who(send), Who(get))
+	log.Infof("trade in exin, %s, send %s, get %s", a, Who(send), Who(get))
 	transfer := bot.TransferInput{
 		AssetId:     send,
 		RecipientId: ExinCore,
