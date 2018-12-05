@@ -83,9 +83,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 			v, _ := prettyjson.Marshal(e)
 			log.Printf("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
 
-			ant.lock.Lock()
 			ant.exOrders[exchangeOrder] = false
-			ant.lock.Unlock()
 
 			switch e.Category {
 			case StrategyLow:
@@ -96,6 +94,10 @@ func (ant *Ant) Trade(ctx context.Context) {
 
 				select {
 				case amount := <-ant.matchedAmount:
+					ant.lock.Lock()
+					ant.exOrders[exchangeOrder] = true
+					ant.lock.Unlock()
+
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					equalAmount := e.Price.Mul(amount)
 					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err != nil {
@@ -112,7 +114,10 @@ func (ant *Ant) Trade(ctx context.Context) {
 
 				select {
 				case amount := <-ant.matchedAmount:
+					ant.lock.Lock()
 					ant.exOrders[exchangeOrder] = true
+					ant.lock.Unlock()
+
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					if _, err := ExinTrade(amount.String(), e.Base, e.Quote, otcOrder); err != nil {
 						log.Error(err)
