@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/jinzhu/gorm"
@@ -127,10 +126,8 @@ func main() {
 				go ant.Trade(subctx)
 				select {
 				case <-sig:
-					fmt.Println("cancel orders in 3 seconds.")
 					cancel()
 					SaveProperty(ctx, db)
-					time.Sleep(3 * time.Second)
 					return nil
 				}
 			},
