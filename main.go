@@ -56,7 +56,7 @@ func main() {
 				if len(amount) == 0 || len(send) == 0 || len(get) == 0 {
 					return fmt.Errorf("invalid params")
 				}
-				_, err := ExinTrade(amount, Who(send), Who(get))
+				_, err := ExinTrade(amount, GetAssetId(send), GetAssetId(get))
 				return err
 			},
 		},
