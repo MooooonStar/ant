@@ -145,8 +145,8 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 		case <-ctx.Done():
 			return
 		default:
-			if exchange, err := GetOceanDepth(ctx, base, quote); err == nil {
-				if otc, err := GetExinDepth(ctx, base, quote); err == nil {
+			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
+				if exchange, err := GetOceanDepth(ctx, base, quote); err == nil {
 					if len(exchange.Bids) > 0 && len(otc.Bids) > 0 {
 						ant.Low(ctx, exchange.Bids[0], otc.Bids[0], base, quote)
 					}

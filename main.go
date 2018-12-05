@@ -43,6 +43,25 @@ func main() {
 			},
 		},
 		{
+			Name:  "trade",
+			Usage: "trade in exin",
+			Flags: []cli.Flag{
+				cli.StringFlag{Name: "amount"},
+				cli.StringFlag{Name: "send"},
+				cli.StringFlag{Name: "get"},
+			},
+			Action: func(c *cli.Context) error {
+				amount := c.String("amount")
+				send := strings.ToUpper(c.String("send"))
+				get := strings.ToUpper(c.String("get"))
+				if len(amount) == 0 || len(send) == 0 || len(get) == 0 {
+					return fmt.Errorf("invalid params")
+				}
+				_, err := ExinTrade(amount, Who(send), Who(get))
+				return err
+			},
+		},
+		{
 			Name:  "cancel",
 			Usage: "cancel order in ocean.one by snapshot or trace",
 			Flags: []cli.Flag{
