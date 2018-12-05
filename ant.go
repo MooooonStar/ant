@@ -98,6 +98,10 @@ func (ant *Ant) Trade(ctx context.Context) {
 					ant.exOrders[exchangeOrder] = true
 					ant.lock.Unlock()
 
+					if minAmount := amount.Round(ExinAssetPrecision(e.Quote)); minAmount.IsZero() {
+						continue
+					}
+
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					equalAmount := e.Price.Mul(amount)
 					if _, err := ExinTrade(equalAmount.String(), e.Quote, e.Base, otcOrder); err != nil {
@@ -118,6 +122,9 @@ func (ant *Ant) Trade(ctx context.Context) {
 					ant.exOrders[exchangeOrder] = true
 					ant.lock.Unlock()
 
+					if minAmount := amount.Round(ExinAssetPrecision(e.Base)); minAmount.IsZero() {
+						continue
+					}
 					otcOrder := UuidWithString(e.ID + ExinCore)
 					if _, err := ExinTrade(amount.String(), e.Base, e.Quote, otcOrder); err != nil {
 						log.Error(err)
