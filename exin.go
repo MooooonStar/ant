@@ -61,6 +61,7 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 }
 
 func ExinAssetPrecision(assetId string) int32 {
+	//TODO
 	switch assetId {
 	case XIN:
 		return 4

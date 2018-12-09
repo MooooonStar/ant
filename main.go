@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var baseSymbols = []string{"BTC", "EOS", "XIN"}
+var baseSymbols = []string{"EOS", "BTC", "XIN"}
 var quoteSymbols = []string{"USDT", "BTC"}
 
 func main() {
@@ -86,14 +86,22 @@ func main() {
 				cli.StringFlag{Name: "pair"},
 				cli.BoolFlag{Name: "enable"},
 				cli.BoolFlag{Name: "debug"},
+				cli.BoolFlag{Name: "file"},
 			},
 			Action: func(c *cli.Context) error {
 				if debug := c.Bool("debug"); debug {
 					log.SetLevel(log.DebugLevel)
 				}
+				if tofile := c.Bool("file"); tofile {
+					file, err := os.OpenFile("/tmp/ant.log", os.O_WRONLY|os.O_APPEND, 0666)
+					if err != nil {
+						panic(err)
+					}
+					log.SetOutput(file)
+				}
 
 				pair := c.String("pair")
-				enabled := c.Bool("enable")
+				enable := c.Bool("enable")
 				symbols := strings.Split(pair, "/")
 				var baseSymbol, quoteSymbol string
 				if len(symbols) == 2 {
@@ -113,17 +121,25 @@ func main() {
 				db.AutoMigrate(&Wallet{})
 				SaveProperty(ctx, db)
 
+				ant := NewAnt(enable)
+				go ant.PollMixinNetwork(ctx)
+				go ant.UpdateBalance(ctx)
+
 				subctx, cancel := context.WithCancel(ctx)
-				ant := NewAnt(enabled)
-				go ant.PollMixinNetwork(subctx)
 				for _, baseSymbol := range baseSymbols {
 					for _, quoteSymbol := range quoteSymbols {
 						base := GetAssetId(strings.ToUpper(baseSymbol))
 						quote := GetAssetId(strings.ToUpper(quoteSymbol))
+
+						client := NewClient(subctx, base, quote, ant.OnMessage(base, quote))
+						go client.Receive(subctx)
+
 						go ant.Watching(subctx, base, quote)
+						go ant.Fishing(subctx, base, quote)
 					}
 				}
-				go ant.Trade(subctx)
+				go ant.Trade(ctx)
+				//ctrl-c 退出时先取消订单
 				select {
 				case <-sig:
 					cancel()

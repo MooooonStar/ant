@@ -61,8 +61,8 @@ func TestExinTrade(t *testing.T) {
 
 func TestOceanTrade(t *testing.T) {
 	//OceanCore = F1exCore
-	price, amount := "0.0193", "0.11"
-	sellTrace, err := OceanSell(price, amount, "L", EOS, USDT)
+	price, amount := "3711", "0.001"
+	sellTrace, err := OceanSell(price, amount, "L", BTC, USDT)
 	assert.Nil(t, err)
 	fmt.Println("sellTrace: ", sellTrace)
 
@@ -71,16 +71,16 @@ func TestOceanTrade(t *testing.T) {
 	// fmt.Println("buyTrace: ", buyTrace)
 }
 
-//51f73f1f-212e-48cd-b990-b5819716f8f7
+//201602a3-a0d2-439e-8e63-e1b6dec86b76
 func TestOceanCancel(t *testing.T) {
 	//OceanCore = F1exCore
-	err := OceanCancel("53a6e3fc-5e69-3408-a4fc-fd666b967693")
+	err := OceanCancel("201602a3-a0d2-439e-8e63-e1b6dec86b76")
 	fmt.Println(err)
 }
 
 func TestUUIDl(t *testing.T) {
 	//OceanCore = F1exCore
-	e := Event{
+	e := ProfitEvent{
 		Category: "L",
 		Base:     EOS,
 		Quote:    BTC,
@@ -111,19 +111,25 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	// match := "hKFBsGIJVgm6i0IUtYnNDcHGzQihQrCDA1ErlVY6HJhhgmB0qGapoU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
-	// var action TransferAction
-	// action.Unpack(match)
-	// fmt.Println(action.B)
-	// fmt.Println(action.A)
+	match := "hKFBsL8MIKGyNUwSvcuSnP4e9v+hQrDF0+nSQzU94J/kBLvI8OCToU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
+	var action TransferAction
+	action.Unpack(match)
+	fmt.Println(action)
 
-	var order OceanOrderAction
-	order.Unpack("hKFToUKhUKkzODA5Ljg3ODahVKFMoUGwxtDHKCYkQpuODdnRm2WS+g==")
-	fmt.Println("order", order)
+	// var order OceanOrderAction
+	// order.Unpack("hKFToUGhUKQzNzExoVShTKFBsIFbCxonZDc2j6pC1pT6Ygo=")
+	// fmt.Println("order", order)
 }
 
 func TestReadAssets(t *testing.T) {
 	data, _ := ReadAssets(context.TODO())
 	v, _ := prettyjson.Marshal(data)
+	fmt.Println(string(v))
+}
+
+func TestGetTrades(t *testing.T) {
+	trades, err := GetOceanTrades(context.TODO(), BTC, USDT)
+	assert.Nil(t, err)
+	v, _ := prettyjson.Marshal(trades)
 	fmt.Println(string(v))
 }

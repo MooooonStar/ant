@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	PageSideAsk     = "A"
-	PageSideBid     = "B"
+	OrderSideAsk    = "A"
+	OrderSideBid    = "B"
 	OrderTypeLimit  = "L"
 	OrderTypeMarket = "M"
 
@@ -123,14 +123,14 @@ func OrderCheck(action OceanOrderAction, desireAmount, quote string) error {
 	amount := number.NewInteger(0, AmountPrecision)
 
 	assetDecimal := number.FromString(desireAmount)
-	if action.S == PageSideBid {
+	if action.S == OrderSideBid {
 		maxFunds := number.NewDecimal(MaxFunds, int32(fundsPrecision))
 		if assetDecimal.Cmp(maxFunds) > 0 {
 			return fmt.Errorf("the funds should be less than %v", maxFunds)
 		}
 		funds = assetDecimal.Integer(fundsPrecision)
 		if funds.Decimal().Cmp(QuoteMinimum(quote)) < 0 {
-			return fmt.Errorf("the funds should be greater than %v", funds)
+			return fmt.Errorf("the funds should be greater than %v", funds.Persist())
 		}
 	} else {
 		maxAmount := number.NewDecimal(MaxAmount, AmountPrecision)
@@ -146,7 +146,6 @@ func OrderCheck(action OceanOrderAction, desireAmount, quote string) error {
 	return nil
 }
 
-//if the category is "M", the price should be zero.
 func OceanBuy(price, amount, category, base, quote string, trace ...string) (string, error) {
 	log.Infof("++++++Buy %s at price %12.8s, amount %12.8s, type: %s ", base, price, amount, category)
 	order := OceanOrderAction{
@@ -176,7 +175,6 @@ func OceanBuy(price, amount, category, base, quote string, trace ...string) (str
 	return traceId, err
 }
 
-//if the category is "M", the price should be zero.
 func OceanSell(price, amount, category, base, quote string, trace ...string) (string, error) {
 	log.Infof("-----Sell %s at price %12.8s, amount %12.8s, type: %s", quote, price, amount, category)
 	order := OceanOrderAction{

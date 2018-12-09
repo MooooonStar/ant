@@ -8,11 +8,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 )
@@ -132,33 +131,33 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
+	v, _ := prettyjson.Marshal(s)
+	log.Info("find snapshot:", string(v))
+
 	var order TransferAction
 	if err := order.Unpack(s.Data); err != nil {
-		return err
+		return nil
 	}
-
-	v0, _ := prettyjson.Marshal(s)
-	log.Println("find snapshot.", string(v0))
 
 	if order.S != "MATCH" {
 		return nil
 	}
 
 	amount, _ := decimal.NewFromString(s.Amount)
-
-	v, _ := prettyjson.Marshal(order)
-	log.Println("---orders matched:", ex.exOrders, string(v))
-
-	ex.lock.Lock()
-	defer ex.lock.Unlock()
+	ex.orderLock.Lock()
+	defer ex.orderLock.Unlock()
+	//一个订单可能对应多笔成交，只正常处理第一笔
 	if bidFinished, bidOK := ex.exOrders[order.B.String()]; bidOK {
 		if !bidFinished {
+			log.Debug("order matched,", order)
 			ex.matchedAmount <- amount
 		}
 	} else if askFinished, askOK := ex.exOrders[order.A.String()]; askOK {
 		if !askFinished {
+			log.Debug("order matched,", order)
 			ex.matchedAmount <- amount
 		}
 	}
+
 	return nil
 }
