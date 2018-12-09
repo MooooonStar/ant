@@ -147,12 +147,12 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	ex.orderLock.Lock()
 	defer ex.orderLock.Unlock()
 	//一个订单可能对应多笔成交，只正常处理第一笔
-	if bidFinished, bidOK := ex.exOrders[order.B.String()]; bidOK {
+	if bidFinished, bidOK := ex.orders[order.B.String()]; bidOK {
 		if !bidFinished {
 			log.Debug("order matched,", order)
 			ex.matchedAmount <- amount
 		}
-	} else if askFinished, askOK := ex.exOrders[order.A.String()]; askOK {
+	} else if askFinished, askOK := ex.orders[order.A.String()]; askOK {
 		if !askFinished {
 			log.Debug("order matched,", order)
 			ex.matchedAmount <- amount

@@ -60,8 +60,8 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
+//实际exin上不同交易对的精度不一样，这里简单处理了
 func ExinAssetPrecision(assetId string) int32 {
-	//TODO
 	switch assetId {
 	case XIN:
 		return 4

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/md5"
 	"io"
-	"strings"
 	"sync"
 	"time"
 
@@ -33,27 +32,29 @@ type ProfitEvent struct {
 }
 
 type Ant struct {
-	event         chan ProfitEvent
-	snapshots     map[string]bool
-	exOrders      map[string]bool
-	orderLock     sync.Mutex
-	matchedAmount chan decimal.Decimal
-	Enable        bool
+	//是否开启交易
+	Enable bool
+	//发现套利机会
+	event     chan ProfitEvent
+	snapshots map[string]bool
+	orders    map[string]bool
+	//买单和卖单的红黑树，生成深度用
 	books         map[string]*OrderBook
 	assets        map[string]decimal.Decimal
+	matchedAmount chan decimal.Decimal
 	assetsLock    sync.Mutex
-	fishingOrders map[string]bool
+	orderLock     sync.Mutex
 }
 
 func NewAnt(enable bool) *Ant {
 	return &Ant{
+		Enable:        enable,
 		event:         make(chan ProfitEvent, 0),
 		snapshots:     make(map[string]bool, 0),
-		exOrders:      make(map[string]bool, 0),
-		matchedAmount: make(chan decimal.Decimal, 0),
-		Enable:        enable,
+		orders:        make(map[string]bool, 0),
 		books:         make(map[string]*OrderBook, 0),
 		assets:        make(map[string]decimal.Decimal, 0),
+		matchedAmount: make(chan decimal.Decimal, 0),
 	}
 }
 
@@ -77,7 +78,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			//退出时取消未完成的订单
-			for trace, ok := range ant.exOrders {
+			for trace, ok := range ant.orders {
 				if !ok {
 					OceanCancel(trace)
 				}
@@ -85,7 +86,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 			return
 		case e := <-ant.event:
 			exchangeOrder := UuidWithString(e.ID + OceanCore)
-			if _, ok := ant.exOrders[exchangeOrder]; ok {
+			if _, ok := ant.orders[exchangeOrder]; ok {
 				continue
 			}
 
@@ -93,11 +94,11 @@ func (ant *Ant) Trade(ctx context.Context) {
 			log.Infof("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
 
 			if !ant.Enable {
-				ant.exOrders[exchangeOrder] = true
+				ant.orders[exchangeOrder] = true
 				continue
 			}
 
-			ant.exOrders[exchangeOrder] = false
+			ant.orders[exchangeOrder] = false
 			switch e.Category {
 			case PageSideBid:
 				amount := e.Amount.Mul(e.Price)
@@ -117,7 +118,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 			select {
 			case amount := <-ant.matchedAmount:
 				ant.orderLock.Lock()
-				ant.exOrders[exchangeOrder] = true
+				ant.orders[exchangeOrder] = true
 				ant.orderLock.Unlock()
 
 				otcOrder := UuidWithString(e.ID + ExinCore)
@@ -131,7 +132,7 @@ func (ant *Ant) Trade(ctx context.Context) {
 			case <-time.After(OrderConfirmedTime):
 			}
 			ant.orderLock.Lock()
-			ant.exOrders[exchangeOrder] = true
+			ant.orders[exchangeOrder] = true
 			ant.orderLock.Unlock()
 
 			//无论是否成交，均取消订单
@@ -147,7 +148,6 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 			return
 		default:
 			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
-				//if exchange, err := GetOceanDepth(ctx, base, quote); err == nil {
 				pair := base + "-" + quote
 				if exchange := ant.books[pair].GetDepth(3); exchange != nil {
 					if len(exchange.Bids) > 0 && len(otc.Bids) > 0 {
@@ -250,11 +250,4 @@ func (ant *Ant) UpdateBalance(ctx context.Context) error {
 			update()
 		}
 	}
-}
-
-func InsufficientBalance(err error) bool {
-	if err != nil {
-		return strings.Contains(err.Error(), "Insufficient balance.")
-	}
-	return false
 }
