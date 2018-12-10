@@ -49,18 +49,19 @@ func (action *TransferAction) Unpack(memo string) error {
 	return decoder.Decode(action)
 }
 
+type Asset struct {
+	AssetId string `json:"asset_id"               gorm:"type:varchar(36)"`
+}
+
 type Snapshot struct {
 	SnapshotId string `json:"snapshot_id"      gorm:"primary_key;type:varchar(36)"`
 	Amount     string `json:"amount"           gorm:"type:varchar(10)"`
-	Asset      struct {
-		AssetId string `json:"asset_id"        gorm:"type:varchar(36)"`
-	} `json:"asset"`
-	CreatedAt time.Time `json:"created_at"`
-
 	TraceId    string `json:"trace_id"         gorm:"type:varchar(36)"`
 	UserId     string `json:"user_id"          gorm:"type:varchar(36)"`
 	OpponentId string `json:"opponent_id"      gorm:"type:varchar(36)"`
 	Data       string `json:"data"             gorm:"type:varchar(255)"`
+	Asset      `json:"asset"            gorm:"type:varchar(36)"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, limit int) ([]*Snapshot, error) {
@@ -89,8 +90,7 @@ func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, li
 
 func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 	const limit = 500
-	//checkpoint := time.Now().UTC()
-	checkpoint := time.Now().Add(-24 * time.Hour).UTC()
+	checkpoint := time.Now().UTC()
 	for {
 		snapshots, err := ex.requestMixinNetwork(ctx, checkpoint, limit)
 		if err != nil {

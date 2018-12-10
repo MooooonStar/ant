@@ -193,7 +193,7 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 	if side == PageSideAsk {
 		profit = profit.Mul(decimal.NewFromFloat(-1.0))
 	}
-	log.Debugf("bid -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, profit, Who(base), Who(quote))
+	log.Debugf("%s -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Price, otc.Price, profit, Who(base), Who(quote))
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
