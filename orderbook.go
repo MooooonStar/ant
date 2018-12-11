@@ -222,12 +222,13 @@ func (book *OrderBook) OnMessage(msg *BlazeMessage) error {
 			return err
 		}
 
-		Add := func(tree *redblacktree.Tree, orders []Order) {
+		Add := func(tree *redblacktree.Tree, orders []Order, side string) {
 			for _, order := range orders {
 				price, _ := decimal.NewFromString(order.Price)
 				amount, _ := decimal.NewFromString(order.Amount)
 				funds, _ := decimal.NewFromString(order.Funds)
 				entry := Entry{
+					Side:   side,
 					Price:  price,
 					Amount: amount,
 					Funds:  funds,
@@ -236,8 +237,8 @@ func (book *OrderBook) OnMessage(msg *BlazeMessage) error {
 			}
 		}
 
-		Add(book.bids, depth.Bids)
-		Add(book.asks, depth.Asks)
+		Add(book.bids, depth.Bids, PageSideBid)
+		Add(book.asks, depth.Asks, PageSideAsk)
 	}
 	return nil
 }
