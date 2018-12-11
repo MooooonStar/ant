@@ -36,13 +36,9 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
 				if trades, err := GetOceanTrades(ctx, base, quote); err == nil && len(trades) > 0 {
 					ts, _ := time.Parse(time.RFC3339Nano, trades[0].CreateAt)
-					fmt.Println("time", ts.Add(30*time.Minute).Before(time.Now()))
-					fmt.Println("time", ts.Add(8*time.Hour+30*time.Minute).Before(time.Now()))
-					if ts.Add(8*time.Hour + 5*time.Minute).Before(time.Now()) {
+					if ts.Add(5 * time.Minute).Before(time.Now()) {
 						continue
 					}
-					fmt.Println("trade time", ts.Add(8*time.Hour+5*time.Minute))
-					fmt.Println("time now", time.Now())
 					price, _ := decimal.NewFromString(trades[0].Price)
 					precision := price.Exponent()
 					amount, _ := decimal.NewFromString(trades[0].Amount)
