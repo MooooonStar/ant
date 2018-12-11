@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hokaccha/go-prettyjson"
+
 	"github.com/shopspring/decimal"
 )
 
@@ -36,23 +38,26 @@ func GetExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
 	if order, err := GetExinOrder(ctx, base, quote); err != nil {
 		return nil, err
 	} else {
-		price := decimal.NewFromFloat(1.0).Div(order.Price)
-		order.Max = order.Max.Mul(price)
-		order.Min = order.Min.Mul(price)
+		price := order.Price
+		order.Max = order.Max.Div(price)
+		order.Min = order.Min.Div(price)
 		depth.Asks = []Order{*order}
 	}
 
 	if order, err := GetExinOrder(ctx, quote, base); err != nil {
 		return nil, err
 	} else {
-		order.Price = decimal.NewFromFloat(1.0).Div(order.Price)
+		price := decimal.NewFromFloat(1.0).Div(order.Price)
+		order.Max = order.Max.Mul(price)
+		order.Min = order.Min.Mul(price)
+		order.Price = price
 		depth.Bids = []Order{*order}
 	}
 	return &depth, nil
 }
 
 func GetExinOrder(ctx context.Context, base, quote string) (*Order, error) {
-	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?echange_asset=%s&base_asset=%s", base, quote)
+	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?&base_asset=%s", quote)
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -77,13 +82,16 @@ func GetExinOrder(ctx context.Context, base, quote string) (*Order, error) {
 		Data map[string]Ticker `json:"data"`
 	}
 
+	v, _ := prettyjson.Marshal(response.Data)
+	fmt.Println("data", string(v))
+
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, v := range response.Data {
-		if v.Base == base && v.Quote == quote {
+		if v.Base == base {
 			price, _ := decimal.NewFromString(v.Price)
 			min, _ := decimal.NewFromString(v.Min)
 			max, _ := decimal.NewFromString(v.Max)

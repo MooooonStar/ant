@@ -32,7 +32,7 @@ func TestStrategyHigh(t *testing.T) {
 
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetExinDepth(ctx, BTC, USDT)
+	data, _ := GetExinDepth(ctx, XIN, BTC)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
 
@@ -46,9 +46,15 @@ func TestGetExinDepth(t *testing.T) {
 	// fmt.Println(d.Round(-e.Exponent()))
 }
 
+func TestExinOrder(t *testing.T) {
+	order, err := GetExinOrder(context.TODO(), XIN, BTC)
+	assert.Nil(t, err)
+	fmt.Println("order", order)
+}
+
 func TestOceanDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetOceanDepth(ctx, EOS, USDT)
+	data, _ := GetOceanDepth(ctx, BTC, USDT)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
 }
