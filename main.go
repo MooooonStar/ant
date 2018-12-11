@@ -118,6 +118,8 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				ctx = SetDB(ctx, db)
+				db.AutoMigrate(&Snapshot{})
 				db.AutoMigrate(&Wallet{})
 				SaveProperty(ctx, db)
 
@@ -143,6 +145,7 @@ func main() {
 				select {
 				case <-sig:
 					cancel()
+					ant.Clean()
 					SaveProperty(ctx, db)
 					return nil
 				}

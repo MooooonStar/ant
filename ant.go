@@ -73,16 +73,19 @@ func (ant *Ant) OnMessage(base, quote string) *OrderBook {
 	return ant.books[pair]
 }
 
+func (ant *Ant) Clean() {
+	log.Info("++++++++++Cancel orders before exit.", ant.orders)
+	for trace, ok := range ant.orders {
+		if !ok {
+			OceanCancel(trace)
+		}
+	}
+}
+
 func (ant *Ant) Trade(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			//退出时取消未完成的订单
-			for trace, ok := range ant.orders {
-				if !ok {
-					OceanCancel(trace)
-				}
-			}
 			return
 		case e := <-ant.event:
 			exchangeOrder := UuidWithString(e.ID + OceanCore)
@@ -150,12 +153,12 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
 				pair := base + "-" + quote
 				if exchange := ant.books[pair].GetDepth(3); exchange != nil {
-					if len(exchange.Bids) > 0 && len(otc.Bids) > 0 {
-						ant.Strategy(ctx, exchange.Bids[0], otc.Bids[0], base, quote, PageSideBid)
+					if len(exchange.Bids) > 0 && len(otc.Asks) > 0 {
+						ant.Strategy(ctx, exchange.Bids[0], otc.Asks[0], base, quote, PageSideBid)
 					}
 
-					if len(exchange.Asks) > 0 && len(otc.Asks) > 0 {
-						ant.Strategy(ctx, exchange.Asks[0], otc.Asks[0], base, quote, PageSideAsk)
+					if len(exchange.Asks) > 0 && len(otc.Bids) > 0 {
+						ant.Strategy(ctx, exchange.Asks[0], otc.Bids[0], base, quote, PageSideAsk)
 					}
 				}
 			}
@@ -193,7 +196,7 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 	if side == PageSideAsk {
 		profit = profit.Mul(decimal.NewFromFloat(-1.0))
 	}
-	log.Debugf("bid -- ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", exchange.Price, otc.Price, profit, Who(base), Who(quote))
+	log.Debugf("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.Round(8), exchange.Price, otc.Price, profit, Who(base), Who(quote))
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
@@ -205,6 +208,7 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 	}
 	ant.assetsLock.Unlock()
 	amount := LimitAmount(exchange.Amount, balance, otc.Min, otc.Max)
+
 	if !amount.IsPositive() {
 		return
 	}

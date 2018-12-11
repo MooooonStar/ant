@@ -228,7 +228,6 @@ func (book *OrderBook) OnMessage(msg *BlazeMessage) error {
 				amount, _ := decimal.NewFromString(order.Amount)
 				funds, _ := decimal.NewFromString(order.Funds)
 				entry := Entry{
-					Side:   PageSideAsk,
 					Price:  price,
 					Amount: amount,
 					Funds:  funds,

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,7 +25,7 @@ type Trade struct {
 
 //Exin上价格在变动，导致钓鱼单的价格也会变化，造成ocean.one上一笔成交生成多笔钓鱼单，待优化
 func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
@@ -35,28 +36,34 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
 				if trades, err := GetOceanTrades(ctx, base, quote); err == nil && len(trades) > 0 {
 					ts, _ := time.Parse(time.RFC3339Nano, trades[0].CreateAt)
-					if ts.Add(1 * time.Minute).Before(time.Now()) {
+					if ts.Add(5 * time.Minute).Before(time.Now()) {
 						continue
 					}
 					price, _ := decimal.NewFromString(trades[0].Price)
 					precision := price.Exponent()
 					amount, _ := decimal.NewFromString(trades[0].Amount)
-					if len(otc.Bids) > 0 {
-						bidFishing := price.Sub(price.Sub(otc.Bids[0].Price).Mul(precent))
-						exchange := Order{
-							Price:  bidFishing.Truncate(-precision + 1),
-							Amount: amount,
+					if len(otc.Asks) > 0 {
+						if price.GreaterThan(otc.Asks[0].Price) {
+							log.Debugf("!!!!!--find trade profit, amount %s, price %s, %s/%s, start fishing--!!!!!", amount, price, Who(base), Who(quote))
+							bidFishing := price.Sub(price.Sub(otc.Asks[0].Price).Mul(precent))
+							exchange := Order{
+								Price:  bidFishing.Truncate(-precision + 1),
+								Amount: amount,
+							}
+							ant.Strategy(ctx, exchange, otc.Asks[0], base, quote, PageSideBid)
 						}
-						ant.Strategy(ctx, exchange, otc.Bids[0], base, quote, PageSideBid)
 					}
 
-					if len(otc.Asks) > 0 {
-						askFishing := price.Sub(price.Sub(otc.Asks[0].Price).Mul(precent))
-						exchange := Order{
-							Price:  askFishing.Truncate(-precision + 1),
-							Amount: amount,
+					if len(otc.Bids) > 0 {
+						if price.LessThan(otc.Bids[0].Price) {
+							log.Debugf("find trade, amount %s, price %s, %s/%s, start fishing....", amount, price, Who(base), Who(quote))
+							askFishing := price.Sub(price.Sub(otc.Bids[0].Price).Mul(precent))
+							exchange := Order{
+								Price:  askFishing.Truncate(-precision + 1),
+								Amount: amount,
+							}
+							ant.Strategy(ctx, exchange, otc.Bids[0], base, quote, PageSideAsk)
 						}
-						ant.Strategy(ctx, exchange, otc.Asks[0], base, quote, PageSideAsk)
 					}
 				}
 			}

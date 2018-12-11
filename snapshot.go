@@ -49,18 +49,19 @@ func (action *TransferAction) Unpack(memo string) error {
 	return decoder.Decode(action)
 }
 
-type Snapshot struct {
-	SnapshotId string `json:"snapshot_id"`
-	Amount     string `json:"amount"`
-	Asset      struct {
-		AssetId string `json:"asset_id"`
-	} `json:"asset"`
-	CreatedAt time.Time `json:"created_at"`
+type Asset struct {
+	AssetId string `json:"asset_id"               gorm:"type:varchar(36)"`
+}
 
-	TraceId    string `json:"trace_id"`
-	UserId     string `json:"user_id"`
-	OpponentId string `json:"opponent_id"`
-	Data       string `json:"data"`
+type Snapshot struct {
+	SnapshotId string `json:"snapshot_id"      gorm:"primary_key;type:varchar(36)"`
+	Amount     string `json:"amount"           gorm:"type:varchar(10)"`
+	TraceId    string `json:"trace_id"         gorm:"type:varchar(36)"`
+	UserId     string `json:"user_id"          gorm:"type:varchar(36)"`
+	OpponentId string `json:"opponent_id"      gorm:"type:varchar(36)"`
+	Data       string `json:"data"             gorm:"type:varchar(255)"`
+	Asset      `json:"asset"            gorm:"type:varchar(36)"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, limit int) ([]*Snapshot, error) {
@@ -133,6 +134,10 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 
 	v, _ := prettyjson.Marshal(s)
 	log.Info("find snapshot:", string(v))
+
+	if err := Database(ctx).Create(s).Error; err != nil {
+		return err
+	}
 
 	var order TransferAction
 	if err := order.Unpack(s.Data); err != nil {
