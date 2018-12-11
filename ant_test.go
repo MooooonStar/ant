@@ -67,8 +67,8 @@ func TestExinTrade(t *testing.T) {
 
 func TestOceanTrade(t *testing.T) {
 	//OceanCore = F1exCore
-	price, amount := "3711", "0.001"
-	sellTrace, err := OceanSell(price, amount, "L", BTC, USDT)
+	price, amount := "90", "0.02"
+	sellTrace, err := OceanSell(price, amount, "L", ETH, USDT)
 	assert.Nil(t, err)
 	fmt.Println("sellTrace: ", sellTrace)
 

@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var baseSymbols = []string{"EOS", "BTC", "XIN"}
+var baseSymbols = []string{"EOS", "BTC", "XIN", "ETH"}
 var quoteSymbols = []string{"USDT", "BTC"}
 
 func main() {

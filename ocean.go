@@ -147,7 +147,7 @@ func OrderCheck(action OceanOrderAction, desireAmount, quote string) error {
 }
 
 func OceanBuy(price, amount, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("++++++Buy %s at price %12.8s, amount %12.8s, type: %s ", base, price, amount, category)
+	log.Infof("++++++Buy %s at price %12.8s, amount %12.8s, type: %s ", Who(base), price, amount, category)
 	order := OceanOrderAction{
 		S: "B",
 		A: uuid.Must(uuid.FromString(base)),
@@ -176,7 +176,7 @@ func OceanBuy(price, amount, category, base, quote string, trace ...string) (str
 }
 
 func OceanSell(price, amount, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("-----Sell %s at price %12.8s, amount %12.8s, type: %s", quote, price, amount, category)
+	log.Infof("-----Sell %s at price %12.8s, amount %12.8s, type: %s", Who(base), price, amount, category)
 	order := OceanOrderAction{
 		S: "A",
 		A: uuid.Must(uuid.FromString(quote)),
