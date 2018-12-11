@@ -42,6 +42,7 @@ type OrderBook struct {
 	sequences map[string]bool
 	previous  int
 	pair      string
+	trade     Trade
 }
 
 func NewBook(base, quote string) *OrderBook {
@@ -198,6 +199,12 @@ func (book *OrderBook) OnMessage(msg *BlazeMessage) error {
 
 		delete(book.asks, entry)
 		delete(book.bids, entry)
+		book.trade = Trade{
+			Price:    entry.Price.String(),
+			Amount:   entry.Amount.String(),
+			Side:     entry.Side,
+			CreateAt: time.Now().Format(time.RFC3339Nano),
+		}
 	case EventTypeBookT0:
 		book.asks.Clear()
 		book.bids.Clear()
