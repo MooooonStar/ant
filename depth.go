@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -81,9 +79,6 @@ func GetExinOrder(ctx context.Context, base, quote string) (*Order, error) {
 	var response struct {
 		Data map[string]Ticker `json:"data"`
 	}
-
-	v, _ := prettyjson.Marshal(response.Data)
-	fmt.Println("data", string(v))
 
 	err = json.Unmarshal(body, &response)
 	if err != nil {
