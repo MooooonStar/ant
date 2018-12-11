@@ -145,6 +145,7 @@ func main() {
 				select {
 				case <-sig:
 					cancel()
+					ant.Clean()
 					SaveProperty(ctx, db)
 					return nil
 				}
