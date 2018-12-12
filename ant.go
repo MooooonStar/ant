@@ -18,7 +18,7 @@ const (
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	HuobiFee           = 0.001
-	OrderConfirmedTime = 3 * time.Second
+	OrderConfirmedTime = 8 * time.Second
 )
 
 type ProfitEvent struct {
