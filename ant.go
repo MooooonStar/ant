@@ -18,7 +18,7 @@ const (
 	OceanFee           = 0.002
 	ExinFee            = 0.001
 	HuobiFee           = 0.001
-	OrderConfirmedTime = 10 * time.Second
+	OrderConfirmedTime = 3 * time.Second
 )
 
 type ProfitEvent struct {
@@ -35,7 +35,7 @@ type Ant struct {
 	//是否开启交易
 	Enable bool
 	//发现套利机会
-	event     chan ProfitEvent
+	event     chan *ProfitEvent
 	snapshots map[string]bool
 	orders    map[string]bool
 	//买单和卖单的红黑树，生成深度用
@@ -49,7 +49,7 @@ type Ant struct {
 func NewAnt(enable bool) *Ant {
 	return &Ant{
 		Enable:        enable,
-		event:         make(chan ProfitEvent, 0),
+		event:         make(chan *ProfitEvent, 0),
 		snapshots:     make(map[string]bool, 0),
 		orders:        make(map[string]bool, 0),
 		books:         make(map[string]*OrderBook, 0),
@@ -82,64 +82,70 @@ func (ant *Ant) Clean() {
 	}
 }
 
-func (ant *Ant) Trade(ctx context.Context) {
+func (ant *Ant) trade(e *ProfitEvent) error {
+	exchangeOrder := UuidWithString(e.ID + OceanCore)
+	if _, ok := ant.orders[exchangeOrder]; ok {
+		return nil
+	}
+	defer func() {
+		ant.orderLock.Lock()
+		ant.orders[exchangeOrder] = true
+		ant.orderLock.Unlock()
+		OceanCancel(exchangeOrder)
+	}()
+
+	v, _ := prettyjson.Marshal(e)
+	log.Infof("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
+
+	if !ant.Enable {
+		ant.orders[exchangeOrder] = true
+		return nil
+	}
+
+	ant.orders[exchangeOrder] = false
+	switch e.Category {
+	case PageSideBid:
+		amount := e.Amount.Mul(e.Price)
+		if _, err := OceanBuy(e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
+			return err
+		}
+	case PageSideAsk:
+		if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
+			return err
+		}
+	default:
+		panic(e)
+	}
+
+	select {
+	case amount := <-ant.matchedAmount:
+		ant.orderLock.Lock()
+		ant.orders[exchangeOrder] = true
+		ant.orderLock.Unlock()
+
+		otcOrder := UuidWithString(e.ID + ExinCore)
+		send, get := e.Base, e.Quote
+		if e.Category == PageSideAsk {
+			send, get = e.Quote, e.Base
+		}
+		if _, err := ExinTrade(amount.String(), send, get, otcOrder); err != nil {
+			log.Error(err)
+		}
+	case <-time.After(OrderConfirmedTime):
+	}
+	return nil
+}
+
+func (ant *Ant) Trade(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return ctx.Err()
 		case e := <-ant.event:
-			exchangeOrder := UuidWithString(e.ID + OceanCore)
-			if _, ok := ant.orders[exchangeOrder]; ok {
-				continue
+			if err := ant.trade(e); err != nil {
+				log.Error(err)
+				return err
 			}
-
-			v, _ := prettyjson.Marshal(e)
-			log.Infof("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
-
-			if !ant.Enable {
-				ant.orders[exchangeOrder] = true
-				continue
-			}
-
-			ant.orders[exchangeOrder] = false
-			switch e.Category {
-			case PageSideBid:
-				amount := e.Amount.Mul(e.Price)
-				if _, err := OceanBuy(e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
-					log.Error(err)
-					continue
-				}
-			case PageSideAsk:
-				if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
-					log.Error(err)
-					continue
-				}
-			default:
-				panic(e)
-			}
-
-			select {
-			case amount := <-ant.matchedAmount:
-				ant.orderLock.Lock()
-				ant.orders[exchangeOrder] = true
-				ant.orderLock.Unlock()
-
-				otcOrder := UuidWithString(e.ID + ExinCore)
-				send, get := e.Base, e.Quote
-				if e.Category == PageSideAsk {
-					send, get = e.Quote, e.Base
-				}
-				if _, err := ExinTrade(amount.String(), send, get, otcOrder); err != nil {
-					log.Error(err)
-				}
-			case <-time.After(OrderConfirmedTime):
-			}
-			ant.orderLock.Lock()
-			ant.orders[exchangeOrder] = true
-			ant.orderLock.Unlock()
-
-			//无论是否成交，均取消订单
-			OceanCancel(exchangeOrder)
 		}
 	}
 }
@@ -213,7 +219,7 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 		return
 	}
 	id := UuidWithString(Who(base) + Who(quote) + exchange.Price.String() + exchange.Amount.String() + category)
-	ant.event <- ProfitEvent{
+	ant.event <- &ProfitEvent{
 		ID:       id,
 		Category: category,
 		Price:    exchange.Price,

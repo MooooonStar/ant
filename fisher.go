@@ -45,7 +45,7 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 						bidFishing := price.Sub(price.Sub(otc.Asks[0].Price).Mul(precent))
 						exchange := Order{
 							Price:  bidFishing.Truncate(-precision + 1),
-							Amount: amount,
+							Amount: amount.Mul(decimal.NewFromFloat(5.0)),
 						}
 						ant.Strategy(ctx, exchange, otc.Asks[0], base, quote, PageSideBid)
 					}

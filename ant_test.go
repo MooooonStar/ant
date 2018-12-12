@@ -67,8 +67,8 @@ func TestExinTrade(t *testing.T) {
 
 func TestOceanTrade(t *testing.T) {
 	//OceanCore = F1exCore
-	price, amount := "90", "0.02"
-	sellTrace, err := OceanSell(price, amount, "L", ETH, USDT)
+	price, amount := "0.0183", "0.02"
+	sellTrace, err := OceanBuy(price, amount, "L", XIN, BTC)
 	assert.Nil(t, err)
 	fmt.Println("sellTrace: ", sellTrace)
 
@@ -130,12 +130,5 @@ func TestOrderMemo(t *testing.T) {
 func TestReadAssets(t *testing.T) {
 	data, _ := ReadAssets(context.TODO())
 	v, _ := prettyjson.Marshal(data)
-	fmt.Println(string(v))
-}
-
-func TestGetTrades(t *testing.T) {
-	trades, err := GetOceanTrades(context.TODO(), BTC, USDT)
-	assert.Nil(t, err)
-	v, _ := prettyjson.Marshal(trades)
 	fmt.Println(string(v))
 }
