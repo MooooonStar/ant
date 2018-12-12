@@ -39,13 +39,14 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 				price, _ := decimal.NewFromString(trade.Price)
 				precision := price.Exponent()
 				amount, _ := decimal.NewFromString(trade.Amount)
+				amount = amount.Mul(decimal.NewFromFloat(3.0))
 				if len(otc.Asks) > 0 {
 					if price.GreaterThan(otc.Asks[0].Price) {
 						log.Debugf("!!!!!--find trade profit, amount %s, price %s, %s/%s, start fishing--!!!!!", amount, price, Who(base), Who(quote))
 						bidFishing := price.Sub(price.Sub(otc.Asks[0].Price).Mul(precent))
 						exchange := Order{
 							Price:  bidFishing.Truncate(-precision + 1),
-							Amount: amount.Mul(decimal.NewFromFloat(5.0)),
+							Amount: amount,
 						}
 						ant.Strategy(ctx, exchange, otc.Asks[0], base, quote, PageSideBid)
 					}
