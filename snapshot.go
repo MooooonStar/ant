@@ -156,15 +156,11 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		if !bidFinished {
 			log.Info("order matched,", order)
 			ex.matchedAmount <- amount
-		} else {
-			ExinTrade(s.Amount, s.AssetId, USDT)
 		}
 	} else if askFinished, askOK := ex.orders[order.A.String()]; askOK {
 		if !askFinished {
 			log.Info("order matched,", order)
 			ex.matchedAmount <- amount
-		} else {
-			ExinTrade(s.Amount, s.AssetId, USDT)
 		}
 	}
 
