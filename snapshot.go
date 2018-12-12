@@ -154,13 +154,17 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	//一个订单可能对应多笔成交，只正常处理第一笔
 	if bidFinished, bidOK := ex.orders[order.B.String()]; bidOK {
 		if !bidFinished {
-			log.Debug("order matched,", order)
+			log.Info("order matched,", order)
 			ex.matchedAmount <- amount
+		} else {
+			ExinTrade(s.Amount, s.AssetId, USDT)
 		}
 	} else if askFinished, askOK := ex.orders[order.A.String()]; askOK {
 		if !askFinished {
-			log.Debug("order matched,", order)
+			log.Info("order matched,", order)
 			ex.matchedAmount <- amount
+		} else {
+			ExinTrade(s.Amount, s.AssetId, USDT)
 		}
 	}
 
