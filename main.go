@@ -124,10 +124,9 @@ func main() {
 				SaveProperty(ctx, db)
 
 				ant := NewAnt(enable)
-				go ant.PollMixinNetwork(ctx)
-				go ant.UpdateBalance(ctx)
-
 				subctx, cancel := context.WithCancel(ctx)
+				go ant.PollMixinNetwork(subctx)
+				go ant.UpdateBalance(subctx)
 				for _, baseSymbol := range baseSymbols {
 					for _, quoteSymbol := range quoteSymbols {
 						base := GetAssetId(strings.ToUpper(baseSymbol))
@@ -140,13 +139,13 @@ func main() {
 						go ant.Fishing(subctx, base, quote)
 					}
 				}
-				go ant.Trade(ctx)
+				go ant.Trade(subctx)
 				//ctrl-c 退出时先取消订单
 				select {
 				case <-sig:
 					cancel()
 					ant.Clean()
-					SaveProperty(ctx, db)
+					SaveProperty(subctx, db)
 					return nil
 				}
 			},
