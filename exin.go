@@ -37,6 +37,23 @@ func (order *ExinOrderAction) Unpack(memo string) error {
 	return msgpack.Unmarshal(parsedpack, order)
 }
 
+type ExinTransferAction struct {
+	C  int       // code
+	P  string    // price, only type is return
+	F  string    // ExinCore fee, only type is return
+	FA string    // ExinCore fee asset, only type is return
+	T  string    // type: refund(F)|return(R)|Error(E)
+	O  uuid.UUID // order: trace_id
+}
+
+func (order *ExinTransferAction) Unpack(memo string) error {
+	parsedpack, err := base64.StdEncoding.DecodeString(memo)
+	if err != nil {
+		return err
+	}
+	return msgpack.Unmarshal(parsedpack, order)
+}
+
 func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	traceId := uuid.Must(uuid.NewV4()).String()
 	if len(trace) == 1 {

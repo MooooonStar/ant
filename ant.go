@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/emirpasic/gods/lists/arraylist"
 	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
@@ -22,13 +23,20 @@ const (
 )
 
 type ProfitEvent struct {
-	ID       string          `json:"-"`
-	Category string          `json:"category"`
-	Price    decimal.Decimal `json:"price"`
-	Profit   decimal.Decimal `json:"profit"`
-	Amount   decimal.Decimal `json:"amount"`
-	Base     string          `json:"base"`
-	Quote    string          `json:"quote"`
+	ID        string          `json:"-"`
+	Category  string          `json:"category"`
+	Price     decimal.Decimal `json:"price"`
+	Profit    decimal.Decimal `json:"profit"`
+	Amount    decimal.Decimal `json:"amount"`
+	Base      string          `json:"base"`
+	Quote     string          `json:"quote"`
+	CreatedAt time.Time       `json:"created_at"`
+	//for async
+	BaseAmount    decimal.Decimal `json:"-"`
+	QuoteAmount   decimal.Decimal `json:"-"`
+	ExchangeOrder string          `json:"-"`
+	OtcOrder      string          `json:"-"`
+	Status        string          `json:"-"`
 }
 
 type Ant struct {
@@ -44,6 +52,7 @@ type Ant struct {
 	matchedAmount chan decimal.Decimal
 	assetsLock    sync.Mutex
 	orderLock     sync.Mutex
+	queue         *arraylist.List
 }
 
 func NewAnt(enable bool) *Ant {
@@ -55,6 +64,7 @@ func NewAnt(enable bool) *Ant {
 		books:         make(map[string]*OrderBook, 0),
 		assets:        make(map[string]decimal.Decimal, 0),
 		matchedAmount: make(chan decimal.Decimal, 0),
+		queue:         arraylist.New(),
 	}
 }
 
@@ -74,7 +84,7 @@ func (ant *Ant) OnMessage(base, quote string) *OrderBook {
 }
 
 func (ant *Ant) Clean() {
-	log.Info("++++++++++Cancel orders before exit.", ant.orders)
+	log.Info("++++++++++Cancel orders before exit.+++++++++++", ant.orders)
 	for trace, ok := range ant.orders {
 		if !ok {
 			OceanCancel(trace)
@@ -87,12 +97,6 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 	if _, ok := ant.orders[exchangeOrder]; ok {
 		return nil
 	}
-	defer func() {
-		ant.orderLock.Lock()
-		ant.orders[exchangeOrder] = true
-		ant.orderLock.Unlock()
-		OceanCancel(exchangeOrder)
-	}()
 
 	v, _ := prettyjson.Marshal(e)
 	log.Infof("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
@@ -102,6 +106,15 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		return nil
 	}
 
+	defer func() {
+		go func(trace string) {
+			select {
+			case <-time.After(OrderConfirmedTime):
+				OceanCancel(trace)
+			}
+		}(exchangeOrder)
+	}()
+
 	ant.orders[exchangeOrder] = false
 	switch e.Category {
 	case PageSideBid:
@@ -109,30 +122,22 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		if _, err := OceanBuy(e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 			return err
 		}
+		e.QuoteAmount = amount
 	case PageSideAsk:
 		if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 			return err
 		}
+		e.BaseAmount = e.Amount
 	default:
 		panic(e)
 	}
 
-	select {
-	case amount := <-ant.matchedAmount:
-		ant.orderLock.Lock()
-		ant.orders[exchangeOrder] = true
-		ant.orderLock.Unlock()
+	e.ExchangeOrder = exchangeOrder
+	ant.queue.Add(e)
+	return nil
+}
 
-		otcOrder := UuidWithString(e.ID + ExinCore)
-		send, get := e.Base, e.Quote
-		if e.Category == PageSideAsk {
-			send, get = e.Quote, e.Base
-		}
-		if _, err := ExinTrade(amount.String(), send, get, otcOrder); err != nil {
-			log.Error(err)
-		}
-	case <-time.After(OrderConfirmedTime):
-	}
+func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 	return nil
 }
 
@@ -220,13 +225,14 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 	}
 	id := UuidWithString(Who(base) + Who(quote) + exchange.Price.String() + exchange.Amount.String() + category)
 	ant.event <- &ProfitEvent{
-		ID:       id,
-		Category: category,
-		Price:    exchange.Price,
-		Amount:   amount,
-		Profit:   profit,
-		Base:     base,
-		Quote:    quote,
+		ID:        id,
+		Category:  category,
+		Price:     exchange.Price,
+		Amount:    amount,
+		Profit:    profit,
+		Base:      base,
+		Quote:     quote,
+		CreatedAt: time.Now(),
 	}
 	return
 }

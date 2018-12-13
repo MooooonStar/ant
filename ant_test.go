@@ -117,7 +117,7 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsL8MIKGyNUwSvcuSnP4e9v+hQrDF0+nSQzU94J/kBLvI8OCToU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
+	match := "hKFBsNrf8RiltjsPjEDBdYkY1RihQrBpnhYR4phGqIDx0am3eyRloU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
 	var action TransferAction
 	action.Unpack(match)
 	fmt.Println(action)
@@ -125,6 +125,16 @@ func TestOrderMemo(t *testing.T) {
 	// var order OceanOrderAction
 	// order.Unpack("hKFToUGhUKQzNzExoVShTKFBsIFbCxonZDc2j6pC1pT6Ygo=")
 	// fmt.Println("order", order)
+}
+
+func TestExinMemo(t *testing.T) {
+	var order ExinOrderAction
+	order.Unpack("gaFBxBDG0McoJiRCm44N2dGbZZL6")
+	fmt.Println("order", order)
+
+	var transfer ExinTransferAction
+	transfer.Unpack("g6FDzQPvoVShRqFPxBBqrNbHPnE53Zyntog9Nr7w")
+	fmt.Println("transfer", transfer)
 }
 
 func TestReadAssets(t *testing.T) {
