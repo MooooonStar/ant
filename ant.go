@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	ProfitThreshold    = 0.01 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
-	OceanFee           = 0.002
+	ProfitThreshold    = 0.005 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
+	OceanFee           = 0.001
 	ExinFee            = 0.001
 	HuobiFee           = 0.001
 	OrderConfirmedTime = 8 * time.Second
@@ -203,7 +203,7 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 		profit = profit.Mul(decimal.NewFromFloat(-1.0))
 	}
 	log.Debugf("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.Round(8), exchange.Price, otc.Price, profit, Who(base), Who(quote))
-	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) && exchange.Amount.Mul(otc.Price).Mul(profit).LessThan(decimal.NewFromFloat(0.1)) {
+	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
 
