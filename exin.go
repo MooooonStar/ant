@@ -16,11 +16,11 @@ const (
 	ExinCore = "61103d28-3ac2-44a2-ae34-bd956070dab1"
 )
 
-type ExinOrderAction struct {
+type ExinOrder struct {
 	A uuid.UUID // asset uuid
 }
 
-func (order *ExinOrderAction) Pack() string {
+func (order *ExinOrder) Pack() string {
 	pack, err := msgpack.Marshal(order)
 	if err != nil {
 		return ""
@@ -29,7 +29,7 @@ func (order *ExinOrderAction) Pack() string {
 	return base64.StdEncoding.EncodeToString(pack)
 }
 
-func (order *ExinOrderAction) Unpack(memo string) error {
+func (order *ExinOrder) Unpack(memo string) error {
 	parsedpack, err := base64.StdEncoding.DecodeString(memo)
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func (order *ExinOrderAction) Unpack(memo string) error {
 	return msgpack.Unmarshal(parsedpack, order)
 }
 
-type ExinTransferAction struct {
+type ExinTransfer struct {
 	C  int       // code
 	P  string    // price, only type is return
 	F  string    // ExinCore fee, only type is return
@@ -46,7 +46,7 @@ type ExinTransferAction struct {
 	O  uuid.UUID // order: trace_id
 }
 
-func (order *ExinTransferAction) Unpack(memo string) error {
+func (order *ExinTransfer) Unpack(memo string) error {
 	parsedpack, err := base64.StdEncoding.DecodeString(memo)
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	if len(trace) == 1 {
 		traceId = trace[0]
 	}
-	order := ExinOrderAction{
+	order := ExinOrder{
 		A: uuid.Must(uuid.FromString(get)),
 	}
 

@@ -21,34 +21,6 @@ const (
 	CheckpointMixinNetworkSnapshots = "exchange-checkpoint-mixin-network-snapshots"
 )
 
-type TransferAction struct {
-	S string    // source
-	O uuid.UUID // cancelled order
-	A uuid.UUID // matched ask order
-	B uuid.UUID // matched bid order
-}
-
-func (action *TransferAction) Pack() string {
-	memo := make([]byte, 140)
-	handle := new(codec.MsgpackHandle)
-	encoder := codec.NewEncoderBytes(&memo, handle)
-	if err := encoder.Encode(action); err != nil {
-		return ""
-	}
-	return base64.StdEncoding.EncodeToString(memo)
-}
-
-func (action *TransferAction) Unpack(memo string) error {
-	byt, err := base64.StdEncoding.DecodeString(memo)
-	if err != nil {
-		return err
-	}
-
-	handle := new(codec.MsgpackHandle)
-	decoder := codec.NewDecoderBytes(byt, handle)
-	return decoder.Decode(action)
-}
-
 type Asset struct {
 	AssetId string `json:"asset_id"               gorm:"type:varchar(36)"`
 }

@@ -138,6 +138,43 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 }
 
 func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
+	for it := ant.queue.Iterator(); it.Next(); {
+		event := it.Value().(*ProfitEvent)
+		amount, _ := decimal.NewFromString(s.Amount)
+
+		switch s.OpponentId {
+		case ExinCore:
+			if amount.IsPositive() {
+				var order ExinTransfer
+				if err := order.Unpack(s.Data); err != nil {
+					return err
+				}
+
+				if event.OtcOrder == order.O.String() {
+					if s.AssetId == event.Base {
+						event.BaseAmount.Add(amount)
+					} else if s.AssetId == event.Quote {
+						event.QuoteAmount.Add(amount)
+					}
+				}
+			}
+		default:
+			if amount.IsPositive() {
+				var order OceanTransfer
+				if err := order.Unpack(s.Data); err != nil {
+					return err
+				}
+
+				if event.ExchangeOrder == order.O.String() {
+					if s.AssetId == event.Base {
+						event.BaseAmount.Add(amount)
+					} else if s.AssetId == event.Quote {
+						event.QuoteAmount.Add(amount)
+					}
+				}
+			}
+		}
+	}
 	return nil
 }
 
