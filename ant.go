@@ -204,7 +204,7 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 			}
 
 			if _, err := ExinTrade(limited.String(), send, get); err != nil {
-				log.Println(err)
+				log.Error(err)
 			}
 			ant.orderQueue.Remove(it.Index())
 			ant.orders[event.ExchangeOrder] = true
@@ -272,7 +272,7 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
-
+	log.Infof("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.Round(8), exchange.Price, otc.Price, profit, Who(base), Who(quote))
 	id := UuidWithString(Who(base) + Who(quote) + exchange.Price.String() + exchange.Amount.String() + category)
 	ant.event <- &ProfitEvent{
 		ID:        id,
