@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/md5"
-	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -185,19 +184,20 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					ant.assetsLock.Unlock()
 					limited := LimitAmount(amount, balance, event.Min, event.Max)
 
-					if !limited.IsPositive() {
-						return fmt.Errorf("%s, balance: %v, min: %v, send: %v", Who(send), balance, event.Min, send)
-					}
+					log.Info("EXIN--------", limited, Who(send), Who(get))
 
-					if _, err := ExinTrade(limited.String(), send, get); err != nil {
-						log.Error(err)
+					if !limited.IsPositive() {
+						log.Errorf("%s, balance: %v, min: %v, send: %v", Who(send), balance, event.Min, send)
+					} else {
+						if _, err := ExinTrade(limited.String(), send, get); err != nil {
+							log.Error(err)
+							continue
+						}
 					}
 					ant.orderQueue.Remove(it.Index())
 					ant.orders[event.ExchangeOrder] = true
 				}
-				it.End()
 			}
-
 		}
 	}
 }
@@ -233,6 +233,7 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		} else {
 			panic(s.AssetId)
 		}
+		it.End()
 	}
 	return nil
 }
