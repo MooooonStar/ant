@@ -19,24 +19,22 @@ const (
 	OceanFee           = 0.001
 	ExinFee            = 0.001
 	HuobiFee           = 0.001
-	OrderConfirmedTime = 8 * time.Second
+	OrderConfirmedTime = 5 * time.Second
 )
 
 type ProfitEvent struct {
-	ID        string          `json:"-"`
-	Category  string          `json:"category"`
-	Price     decimal.Decimal `json:"price"`
-	Profit    decimal.Decimal `json:"profit"`
-	Amount    decimal.Decimal `json:"amount"`
-	Base      string          `json:"base"`
-	Quote     string          `json:"quote"`
-	CreatedAt time.Time       `json:"created_at"`
+	ID       string          `json:"-"`
+	Category string          `json:"category"`
+	Price    decimal.Decimal `json:"price"`
+	Profit   decimal.Decimal `json:"profit"`
+	Amount   decimal.Decimal `json:"amount"`
+	Base     string          `json:"base"`
+	Quote    string          `json:"quote"`
+	Expire   time.Time       `json:"expire"`
 	//for async
 	BaseAmount    decimal.Decimal `json:"-"`
 	QuoteAmount   decimal.Decimal `json:"-"`
 	ExchangeOrder string          `json:"-"`
-	OtcOrder      string          `json:"-"`
-	Status        string          `json:"-"`
 }
 
 type Ant struct {
@@ -52,19 +50,22 @@ type Ant struct {
 	matchedAmount chan decimal.Decimal
 	assetsLock    sync.Mutex
 	orderLock     sync.Mutex
-	queue         *arraylist.List
+
+	orderQueue    *arraylist.List
+	snapshotQueue *arraylist.List
 }
 
 func NewAnt(enable bool) *Ant {
 	return &Ant{
 		Enable:        enable,
-		event:         make(chan *ProfitEvent, 0),
+		event:         make(chan *ProfitEvent, 10),
 		snapshots:     make(map[string]bool, 0),
 		orders:        make(map[string]bool, 0),
 		books:         make(map[string]*OrderBook, 0),
 		assets:        make(map[string]decimal.Decimal, 0),
 		matchedAmount: make(chan decimal.Decimal, 0),
-		queue:         arraylist.New(),
+		orderQueue:    arraylist.New(),
+		snapshotQueue: arraylist.New(),
 	}
 }
 
@@ -111,6 +112,7 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 			select {
 			case <-time.After(OrderConfirmedTime):
 				OceanCancel(trace)
+				ant.orders[exchangeOrder] = true
 			}
 		}(exchangeOrder)
 	}()
@@ -122,57 +124,68 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		if _, err := OceanBuy(e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 			return err
 		}
-		e.QuoteAmount = amount
+		e.QuoteAmount = amount.Mul(decimal.NewFromFloat(-1.0))
 	case PageSideAsk:
 		if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
 			return err
 		}
-		e.BaseAmount = e.Amount
+		e.BaseAmount = e.Amount.Mul(decimal.NewFromFloat(-1.0))
 	default:
 		panic(e)
 	}
 
 	e.ExchangeOrder = exchangeOrder
-	ant.queue.Add(e)
+	ant.orderQueue.Add(e)
 	return nil
 }
 
-func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
-	for it := ant.queue.Iterator(); it.Next(); {
+func (ant *Ant) HandleSnapshot(ctx context.Context) error {
+	value, ok := ant.snapshotQueue.Get(0)
+	if !ok {
+		return nil
+	}
+	s := value.(*Snapshot)
+	if s.SnapshotId == ExinCore {
+		return nil
+	}
+	amount, _ := decimal.NewFromString(s.Amount)
+	if amount.IsNegative() {
+		return nil
+	}
+
+	for it := ant.orderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
-		amount, _ := decimal.NewFromString(s.Amount)
+		var order OceanTransfer
+		if err := order.Unpack(s.Data); err != nil {
+			return err
+		}
 
-		switch s.OpponentId {
-		case ExinCore:
-			if amount.IsPositive() {
-				var order ExinTransfer
-				if err := order.Unpack(s.Data); err != nil {
-					return err
-				}
+		if event.ExchangeOrder != order.A.String() && event.ExchangeOrder != order.B.String() {
+			continue
+		}
+		it.End()
 
-				if event.OtcOrder == order.O.String() {
-					if s.AssetId == event.Base {
-						event.BaseAmount.Add(amount)
-					} else if s.AssetId == event.Quote {
-						event.QuoteAmount.Add(amount)
-					}
+		if s.AssetId == event.Base {
+			event.BaseAmount.Add(amount)
+		} else if s.AssetId == event.Quote {
+			event.QuoteAmount.Add(amount)
+		}
+
+		if event.Expire.Before(time.Now()) {
+			amount := event.BaseAmount
+			send, get := event.Base, event.Quote
+			if amount.IsNegative() {
+				amount = event.QuoteAmount
+				send, get = get, send
+				if amount.IsNegative() {
+					panic(amount)
 				}
 			}
-		default:
-			if amount.IsPositive() {
-				var order OceanTransfer
-				if err := order.Unpack(s.Data); err != nil {
-					return err
-				}
-
-				if event.ExchangeOrder == order.O.String() {
-					if s.AssetId == event.Base {
-						event.BaseAmount.Add(amount)
-					} else if s.AssetId == event.Quote {
-						event.QuoteAmount.Add(amount)
-					}
-				}
+			if _, err := ExinTrade(amount.String(), send, get); err != nil {
+				log.Println(err)
 			}
+			ant.orderQueue.Remove(it.Index())
+			ant.orders[event.ExchangeOrder] = true
 		}
 	}
 	return nil
@@ -262,14 +275,14 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 	}
 	id := UuidWithString(Who(base) + Who(quote) + exchange.Price.String() + exchange.Amount.String() + category)
 	ant.event <- &ProfitEvent{
-		ID:        id,
-		Category:  category,
-		Price:     exchange.Price,
-		Amount:    amount,
-		Profit:    profit,
-		Base:      base,
-		Quote:     quote,
-		CreatedAt: time.Now(),
+		ID:       id,
+		Category: category,
+		Price:    exchange.Price,
+		Amount:   amount,
+		Profit:   profit,
+		Base:     base,
+		Quote:    quote,
+		Expire:   time.Now().Add(time.Duration(2 * OrderConfirmedTime)),
 	}
 	return
 }

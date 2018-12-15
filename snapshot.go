@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,10 +9,7 @@ import (
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
-	uuid "github.com/satori/go.uuid"
-	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"github.com/ugorji/go/codec"
 )
 
 const (
@@ -96,11 +92,7 @@ func (ex *Ant) ensureProcessSnapshot(ctx context.Context, s *Snapshot) {
 }
 
 func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
-	if len(s.OpponentId) == 0 || len(s.Data) == 0 {
-		return nil
-	}
-
-	if s.Asset.AssetId == CNB {
+	if len(s.OpponentId) == 0 || len(s.Data) == 0 || s.Asset.AssetId == CNB {
 		return nil
 	}
 
@@ -113,30 +105,7 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
-	var order TransferAction
-	if err := order.Unpack(s.Data); err != nil {
-		return nil
-	}
-
-	if order.S != "MATCH" {
-		return nil
-	}
-
-	amount, _ := decimal.NewFromString(s.Amount)
-	ex.orderLock.Lock()
-	defer ex.orderLock.Unlock()
-	//一个订单可能对应多笔成交，只正常处理第一笔
-	if bidFinished, bidOK := ex.orders[order.B.String()]; bidOK {
-		if !bidFinished {
-			log.Info("order matched,", order)
-			ex.matchedAmount <- amount
-		}
-	} else if askFinished, askOK := ex.orders[order.A.String()]; askOK {
-		if !askFinished {
-			log.Info("order matched,", order)
-			ex.matchedAmount <- amount
-		}
-	}
+	ex.snapshotQueue.Add(s)
 
 	return nil
 }
