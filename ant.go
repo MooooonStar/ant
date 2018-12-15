@@ -232,7 +232,7 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 }
 
 func (ant *Ant) UpdateBalance(ctx context.Context) error {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	update := func() {

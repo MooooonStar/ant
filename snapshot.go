@@ -136,7 +136,9 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	log.Info("find snapshot:", string(v))
 
 	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
-		return err
+		//return err
+		log.Println(err)
+		return nil
 	}
 
 	var order TransferAction
