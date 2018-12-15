@@ -55,7 +55,7 @@ type Asset struct {
 
 type Snapshot struct {
 	SnapshotId string `json:"snapshot_id"      gorm:"primary_key;type:varchar(36)"`
-	Amount     string `json:"amount"           gorm:"type:varchar(10)"`
+	Amount     string `json:"amount"           gorm:"type:varchar(36)"`
 	TraceId    string `json:"trace_id"         gorm:"type:varchar(36)"`
 	UserId     string `json:"user_id"          gorm:"type:varchar(36)"`
 	OpponentId string `json:"opponent_id"      gorm:"type:varchar(36)"`
