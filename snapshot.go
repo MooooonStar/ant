@@ -100,12 +100,13 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	log.Info("find snapshot:", string(v))
 
 	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
-		//return err
-		log.Println(err)
-		return nil
+		log.Error(err)
+		return err
 	}
 
-	ex.snapshotQueue.Add(s)
-
+	if err := ex.HandleSnapshot(ctx, s); err != nil {
+		log.Error(err)
+		return err
+	}
 	return nil
 }

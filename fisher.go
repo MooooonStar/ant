@@ -48,19 +48,19 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 							Price:  bidFishing.Truncate(-precision + 1),
 							Amount: amount,
 						}
-						ant.Strategy(ctx, exchange, otc.Asks[0], base, quote, PageSideBid)
+						ant.Inspect(ctx, exchange, otc.Asks[0], base, quote, PageSideBid, 10*OrderExpireTime)
 					}
 				}
 
 				if len(otc.Bids) > 0 {
 					if price.LessThan(otc.Bids[0].Price) {
-						log.Infof("!!!!!--find trade, amount %s, price %s, %s/%s, start fishing--!!!!!!", amount, price, Who(base), Who(quote))
+						log.Infof("!!!!!--find trade profit, amount %s, price %s, %s/%s, start fishing--!!!!!!", amount, price, Who(base), Who(quote))
 						askFishing := price.Sub(price.Sub(otc.Bids[0].Price).Mul(precent))
 						exchange := Order{
 							Price:  askFishing.Truncate(-precision + 1),
 							Amount: amount,
 						}
-						ant.Strategy(ctx, exchange, otc.Bids[0], base, quote, PageSideAsk)
+						ant.Inspect(ctx, exchange, otc.Bids[0], base, quote, PageSideAsk, 10*OrderExpireTime)
 					}
 				}
 				//}

@@ -117,7 +117,7 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+wcjLTTlSpPKS+/FNFtEp616FTpkNBTkNFTA=="
+	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+wp0erw34MPx+Dq+IZd5D+KaFTpkNBTkNFTA=="
 	var action OceanTransfer
 	action.Unpack(match)
 	fmt.Println(action.A, action.B, action.O, action.S)

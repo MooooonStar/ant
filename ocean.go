@@ -8,6 +8,7 @@ import (
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
 	uuid "github.com/satori/go.uuid"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 )
@@ -173,6 +174,41 @@ func OrderCheck(action OceanOrder, desireAmount, quote string) error {
 		}
 	}
 	return nil
+}
+
+func OceanTrade(side, price, amount, category, base, quote string, trace ...string) (string, error) {
+	log.Infof("++++++%s %s at price %12.8s, amount %12.8s, type: %s ", side, Who(base), price, amount, category)
+	send, get, s := base, quote, "A"
+	if side == PageSideBid {
+		send, get, s = quote, base, "B"
+	}
+	p, _ := decimal.NewFromString(price)
+
+	order := OceanOrder{
+		S: s,
+		A: uuid.Must(uuid.FromString(get)),
+		P: p.Round(PricePrecision).String(),
+		T: category,
+	}
+
+	if err := OrderCheck(order, fmt.Sprint(amount), quote); err != nil {
+		return "", err
+	}
+
+	traceId := uuid.Must(uuid.NewV4()).String()
+	if len(trace) == 1 {
+		traceId = trace[0]
+	}
+	log.Infof("-----trace ----%s", traceId)
+
+	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
+		AssetId:     send,
+		RecipientId: OceanCore,
+		Amount:      number.FromString(amount).Round(AmountPrecision),
+		TraceId:     traceId,
+		Memo:        order.Pack(),
+	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+	return traceId, err
 }
 
 func OceanBuy(price, amount, category, base, quote string, trace ...string) (string, error) {
