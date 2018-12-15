@@ -169,7 +169,6 @@ func OrderCheck(action OceanOrder, desireAmount, quote string) error {
 		}
 		amount = assetDecimal.Integer(AmountPrecision)
 		if action.T == OrderTypeLimit && price.Mul(amount).Decimal().Cmp(QuoteMinimum(quote)) < 0 {
-			fmt.Println(price.Decimal(), amount.Decimal(), price.Mul(amount).Decimal())
 			return fmt.Errorf("the amount should be greater than %v %s", QuoteMinimum(quote), quote)
 		}
 	}
