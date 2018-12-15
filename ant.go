@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/emirpasic/gods/lists/arraylist"
-	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -159,6 +158,50 @@ func LimitAmount(amount, balance, min, max decimal.Decimal) decimal.Decimal {
 	return amount
 }
 
+func (ant *Ant) OnExpire(ctx context.Context) error {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			for it := ant.orderQueue.Iterator(); it.Next(); {
+				event := it.Value().(*ProfitEvent)
+				if event.CreatedAt.Add(time.Duration(2 * event.Expire)).Before(time.Now()) {
+					log.Info("+++++++++Expired+++++++++++++")
+					amount := event.BaseAmount
+					send, get := event.Base, event.Quote
+					if amount.IsNegative() {
+						amount = event.QuoteAmount
+						send, get = event.Quote, event.Base
+						if amount.IsNegative() {
+							panic(amount)
+						}
+					}
+
+					ant.assetsLock.Lock()
+					balance := ant.assets[send]
+					ant.assetsLock.Unlock()
+					limited := LimitAmount(amount, balance, event.Min, event.Max)
+
+					if !limited.IsPositive() {
+						return fmt.Errorf("%s, balance: %v, min: %v, send: %v", Who(send), balance, event.Min, send)
+					}
+
+					if _, err := ExinTrade(limited.String(), send, get); err != nil {
+						log.Error(err)
+					}
+					ant.orderQueue.Remove(it.Index())
+					ant.orders[event.ExchangeOrder] = true
+				}
+				it.End()
+			}
+
+		}
+	}
+}
+
 func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 	if s.SnapshotId == ExinCore {
 		return nil
@@ -170,10 +213,6 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 
 	for it := ant.orderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
-
-		v, _ := prettyjson.Marshal(event)
-		fmt.Println(string(v))
-
 		var order OceanTransfer
 		if err := order.Unpack(s.Data); err != nil {
 			return err
@@ -185,6 +224,8 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 			continue
 		}
 
+		log.Info("++++++++++Order Matched++++++++++")
+
 		if s.AssetId == event.Base {
 			event.BaseAmount.Add(amount)
 		} else if s.AssetId == event.Quote {
@@ -192,46 +233,17 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		} else {
 			panic(s.AssetId)
 		}
-
-		if event.CreatedAt.Add(time.Duration(2 * event.Expire)).Before(time.Now()) {
-			amount := event.BaseAmount
-			send, get := event.Base, event.Quote
-			if amount.IsNegative() {
-				amount = event.QuoteAmount
-				send, get = event.Quote, event.Base
-				if amount.IsNegative() {
-					panic(amount)
-				}
-			}
-
-			ant.assetsLock.Lock()
-			balance := ant.assets[send]
-			ant.assetsLock.Unlock()
-			limited := LimitAmount(amount, balance, event.Min, event.Max)
-
-			if !limited.IsPositive() {
-				return fmt.Errorf("%s, balance: %v, min: %v, send: %v", Who(send), balance, event.Min, send)
-			}
-
-			if _, err := ExinTrade(limited.String(), send, get); err != nil {
-				log.Error(err)
-			}
-			ant.orderQueue.Remove(it.Index())
-			ant.orders[event.ExchangeOrder] = true
-		}
-		it.End()
 	}
 	return nil
 }
 
 func (ant *Ant) Trade(ctx context.Context) error {
+	go ant.OnExpire(ctx)
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case e := <-ant.event:
-			v, _ := prettyjson.Marshal(e)
-			log.Info("try to trade", string(v))
 			if err := ant.trade(e); err != nil {
 				log.Error(err)
 				return err
