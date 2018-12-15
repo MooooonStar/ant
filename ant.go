@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	ProfitThreshold = 0.005 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
+	ProfitThreshold = 0.001 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
 	OceanFee        = 0.001
 	ExinFee         = 0.001
 	HuobiFee        = 0.001
@@ -97,9 +97,6 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		return nil
 	}
 
-	v, _ := prettyjson.Marshal(e)
-	log.Infof("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
-
 	if !ant.Enable {
 		ant.orders[exchangeOrder] = true
 		return nil
@@ -116,9 +113,20 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 	}()
 
 	ant.orders[exchangeOrder] = false
+
 	amount := e.Amount
+	ant.assetsLock.Lock()
+	baseBalance := ant.assets[e.Base]
+	quoteBalance := ant.assets[e.Quote]
+	ant.assetsLock.Unlock()
+	if amount.GreaterThan(baseBalance) {
+		amount = baseBalance
+	}
 	if e.Category == PageSideBid {
 		amount = e.Amount.Mul(e.Price)
+		if amount.GreaterThan(quoteBalance) {
+			amount = quoteBalance
+		}
 	}
 	_, err := OceanTrade(e.Category, e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder)
 	if err != nil {
@@ -222,6 +230,8 @@ func (ant *Ant) Trade(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case e := <-ant.event:
+			v, _ := prettyjson.Marshal(e)
+			log.Info("try to trade", string(v))
 			if err := ant.trade(e); err != nil {
 				log.Error(err)
 				return err
