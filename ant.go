@@ -160,9 +160,12 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
-	found := false
 	for it := ant.orderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
+
+		v, _ := prettyjson.Marshal(event)
+		fmt.Println(string(v))
+
 		var order OceanTransfer
 		if err := order.Unpack(s.Data); err != nil {
 			return err
@@ -173,7 +176,6 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 			event.ExchangeOrder != order.O.String() {
 			continue
 		}
-		found = true
 
 		if s.AssetId == event.Base {
 			event.BaseAmount.Add(amount)
@@ -210,9 +212,6 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 			ant.orders[event.ExchangeOrder] = true
 		}
 		it.End()
-	}
-	if !found {
-		panic(s)
 	}
 	return nil
 }
