@@ -123,6 +123,7 @@ func main() {
 				db.AutoMigrate(&Wallet{})
 				SaveProperty(ctx, db)
 
+				// ant demo
 				ant := NewAnt(enable)
 				subctx, cancel := context.WithCancel(ctx)
 				go ant.PollMixinNetwork(subctx)
@@ -133,13 +134,14 @@ func main() {
 						quote := GetAssetId(strings.ToUpper(quoteSymbol))
 
 						client := NewClient(subctx, base, quote, ant.OnMessage(base, quote))
-						go client.Receive(subctx)
+						go client.ReceiveMessage(subctx)
 
 						go ant.Watching(subctx, base, quote)
 						go ant.Fishing(subctx, base, quote)
 					}
 				}
 				go ant.Trade(subctx)
+
 				//ctrl-c 退出时先取消订单
 				select {
 				case <-sig:

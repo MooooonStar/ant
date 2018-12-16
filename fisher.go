@@ -29,7 +29,6 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 		case <-ticker.C:
 			precent := decimal.NewFromFloat(LowerPercent)
 			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
-				//if trades, err := GetOceanTrades(ctx, base, quote); err == nil && len(trades) > 0 {
 				trade := ant.GetOceanTrade(ctx, base, quote)
 				ts, err := time.Parse(time.RFC3339Nano, trade.CreateAt)
 				if err != nil || ts.Add(5*time.Minute).Before(time.Now()) {
@@ -62,7 +61,6 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 						ant.Inspect(ctx, exchange, otc.Bids[0], base, quote, PageSideAsk, 10*OrderExpireTime)
 					}
 				}
-				//}
 			}
 		}
 	}
@@ -73,6 +71,7 @@ func (ant *Ant) GetOceanTrade(ctx context.Context, base, quote string) Trade {
 	return ant.books[pair].trade
 }
 
+// 更新周期太长(30s)，换成websocket
 // func GetOceanTrades(ctx context.Context, base, quote string) ([]Trade, error) {
 // 	url := "https://events.ocean.one/markets/" + base + "-" + quote + "/trades"
 // 	offset := time.Now().Add(-5 * time.Minute).UTC().Format(time.RFC3339Nano)

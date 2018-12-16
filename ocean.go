@@ -210,64 +210,6 @@ func OceanTrade(side, price, amount, category, base, quote string, trace ...stri
 	return traceId, err
 }
 
-func OceanBuy(price, amount, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("++++++Buy %s at price %12.8s, amount %12.8s, type: %s ", Who(base), price, amount, category)
-	order := OceanOrder{
-		S: "B",
-		A: uuid.Must(uuid.FromString(base)),
-		P: number.FromString(price).Round(PricePrecision).String(),
-		T: category,
-	}
-
-	if err := OrderCheck(order, fmt.Sprint(amount), quote); err != nil {
-		return "", err
-	}
-
-	traceId := uuid.Must(uuid.NewV4()).String()
-	if len(trace) == 1 {
-		traceId = trace[0]
-	}
-	log.Infof("-----buy trace ----%s", traceId)
-
-	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
-		AssetId:     quote,
-		RecipientId: OceanCore,
-		Amount:      number.FromString(amount).Round(AmountPrecision),
-		TraceId:     traceId,
-		Memo:        order.Pack(),
-	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
-	return traceId, err
-}
-
-func OceanSell(price, amount, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("-----Sell %s at price %12.8s, amount %12.8s, type: %s", Who(base), price, amount, category)
-	order := OceanOrder{
-		S: "A",
-		A: uuid.Must(uuid.FromString(quote)),
-		P: number.FromString(price).Round(PricePrecision).String(),
-		T: category,
-	}
-
-	if err := OrderCheck(order, fmt.Sprint(amount), quote); err != nil {
-		return "", err
-	}
-
-	traceId := uuid.Must(uuid.NewV4()).String()
-	if len(trace) == 1 {
-		traceId = trace[0]
-	}
-
-	log.Infof("-----Sell trace ----%s", traceId)
-	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
-		AssetId:     base,
-		RecipientId: OceanCore,
-		Amount:      number.FromString(amount).Round(AmountPrecision),
-		TraceId:     traceId,
-		Memo:        order.Pack(),
-	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
-	return traceId, err
-}
-
 func OceanCancel(trace string) error {
 	log.Infof("*****Cancel : %v", trace)
 	order := OceanOrder{

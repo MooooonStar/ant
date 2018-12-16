@@ -51,7 +51,7 @@ func NewClient(ctx context.Context, base, quote string, h MessageHandler) *Clien
 	}
 }
 
-func (client *Client) Receive(ctx context.Context) error {
+func (client *Client) ReceiveMessage(ctx context.Context) error {
 	for {
 		subCtx, cancel := context.WithCancel(ctx)
 		dialer := websocket.DefaultDialer

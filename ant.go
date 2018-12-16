@@ -8,16 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
-
 	"github.com/emirpasic/gods/lists/arraylist"
+	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	ProfitThreshold = 0.001 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
+	ProfitThreshold = 0.01 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
 	OceanFee        = 0.001
 	ExinFee         = 0.001
 	HuobiFee        = 0.001
@@ -43,12 +42,13 @@ type ProfitEvent struct {
 
 type Ant struct {
 	//是否开启交易
-	Enable bool
+	enable bool
 	//发现套利机会
 	event chan *ProfitEvent
 	//所有交易的snapshot_id
 	snapshots map[string]bool
-	orders    map[string]bool
+	//机器人向ocean.one交易的trace_id
+	orders map[string]bool
 	//买单和卖单的红黑树，生成深度用
 	books      map[string]*OrderBook
 	orderQueue *arraylist.List
@@ -58,7 +58,7 @@ type Ant struct {
 
 func NewAnt(enable bool) *Ant {
 	return &Ant{
-		Enable:     enable,
+		enable:     enable,
 		event:      make(chan *ProfitEvent, 10),
 		snapshots:  make(map[string]bool, 0),
 		orders:     make(map[string]bool, 0),
@@ -93,7 +93,7 @@ func (ant *Ant) Clean() {
 	for it := ant.orderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
 		v, _ := prettyjson.Marshal(event)
-		fmt.Println("event", string(v))
+		fmt.Println("all event", string(v))
 	}
 }
 
@@ -103,7 +103,7 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		return nil
 	}
 
-	if !ant.Enable {
+	if !ant.enable {
 		ant.orders[exchangeOrder] = true
 		return nil
 	}
@@ -306,7 +306,6 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	}
 	id := UuidWithString(exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
 	log.Infof("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.Round(8), exchange.Price, otc.Price, profit, Who(base), Who(quote))
-	log.Info("id+++++++", id)
 	ant.event <- &ProfitEvent{
 		ID:        id,
 		Category:  category,

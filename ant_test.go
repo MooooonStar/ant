@@ -10,40 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStrategyLow(t *testing.T) {
-	price := 4500.0
-	amount := 1.5 / price
-	base, quote := BTC, USDT
-	if _, err := ExinTrade(fmt.Sprint(amount*price), quote, base); err == nil {
-		trace, err := OceanSell(fmt.Sprint(price), fmt.Sprint(amount), "L", base, quote)
-		fmt.Println(trace, err)
-	}
-}
-
-func TestStrategyHigh(t *testing.T) {
-	price := 4500.0
-	amount := 1.5 / price
-	base, quote := BTC, USDT
-	if trace, err := OceanBuy(fmt.Sprint(price), fmt.Sprint(amount*price), "L", base, quote); err == nil {
-		fmt.Println(trace)
-		ExinTrade(fmt.Sprint(amount), base, quote)
-	}
-}
-
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
 	data, _ := GetExinDepth(ctx, XIN, BTC)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
-
-	// a := data.Bids[0].Max.Exponent()
-	// b := data.Bids[0].Min.Exponent()
-	// c := data.Asks[0].Min.Exponent()
-	// fmt.Println(a, b, c)
-
-	// d := decimal.NewFromFloat(1.2456)
-	// e := decimal.NewFromFloat(0.01)
-	// fmt.Println(d.Round(-e.Exponent()))
 }
 
 func TestExinOrder(t *testing.T) {
@@ -63,18 +34,6 @@ func TestExinTrade(t *testing.T) {
 	//price, amount := 3936.6133, 0.0003
 	trace, err := ExinTrade("0.0018", BTC, USDT)
 	fmt.Println(trace, err)
-}
-
-func TestOceanTrade(t *testing.T) {
-	//OceanCore = F1exCore
-	price, amount := "0.0183", "0.02"
-	sellTrace, err := OceanBuy(price, amount, "L", XIN, BTC)
-	assert.Nil(t, err)
-	fmt.Println("sellTrace: ", sellTrace)
-
-	// buyTrace, err := OceanBuy(price, amount*price, "L", XIN, BTC)
-	// assert.Nil(t, err)
-	// fmt.Println("buyTrace: ", buyTrace)
 }
 
 //201602a3-a0d2-439e-8e63-e1b6dec86b76
@@ -131,10 +90,6 @@ func TestExinMemo(t *testing.T) {
 	var order ExinOrder
 	order.Unpack("gaFBxBDG0McoJiRCm44N2dGbZZL6")
 	fmt.Println("order", order)
-
-	var transfer ExinTransfer
-	transfer.Unpack("g6FDzQPvoVShRqFPxBBqrNbHPnE53Zyntog9Nr7w")
-	fmt.Println("transfer", transfer)
 }
 
 func TestReadAssets(t *testing.T) {
