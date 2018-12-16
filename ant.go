@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"crypto/md5"
+	"fmt"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/hokaccha/go-prettyjson"
 
 	"github.com/emirpasic/gods/lists/arraylist"
 	uuid "github.com/satori/go.uuid"
@@ -32,10 +35,10 @@ type ProfitEvent struct {
 	Base          string          `json:"base"`
 	Quote         string          `json:"quote"`
 	CreatedAt     time.Time       `json:"created_at"`
-	Expire        int64           `json:"-"`
-	BaseAmount    decimal.Decimal `json:"-"`
-	QuoteAmount   decimal.Decimal `json:"-"`
-	ExchangeOrder string          `json:"-"`
+	Expire        int64           `json:"expire"`
+	BaseAmount    decimal.Decimal `json:"base_amount"`
+	QuoteAmount   decimal.Decimal `json:"quote_amount"`
+	ExchangeOrder string          `json:"exchange_order"`
 }
 
 type Ant struct {
@@ -86,6 +89,11 @@ func (ant *Ant) Clean() {
 		if !ok {
 			OceanCancel(trace)
 		}
+	}
+	for it := ant.orderQueue.Iterator(); it.Next(); {
+		event := it.Value().(*ProfitEvent)
+		v, _ := prettyjson.Marshal(event)
+		fmt.Println("event", string(v))
 	}
 }
 
@@ -168,13 +176,13 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			for it := ant.orderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
 				if event.CreatedAt.Add(time.Duration(2 * event.Expire)).Before(time.Now()) {
-					log.Info("+++++++++Expired+++++++++++++")
+					log.Info("++++++++++++++++Expired+++++++++++++")
 					amount := event.BaseAmount
 					send, get := event.Base, event.Quote
-					if amount.IsNegative() {
+					if !amount.IsPositive() {
 						amount = event.QuoteAmount
 						send, get = event.Quote, event.Base
-						if amount.IsNegative() {
+						if !amount.IsPositive() {
 							panic(amount)
 						}
 					}
@@ -184,8 +192,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					ant.assetsLock.Unlock()
 					limited := LimitAmount(amount, balance, event.Min, event.Max)
 
-					log.Info("EXIN--------", limited, Who(send), Who(get))
-
+					log.Infof("exin---amount: %v, send: %v, get: %v ---", limited.String(), Who(send), Who(get))
 					if !limited.IsPositive() {
 						log.Errorf("%s, balance: %v, min: %v, send: %v", Who(send), balance, event.Min, send)
 					} else {
@@ -224,15 +231,18 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 			continue
 		}
 
-		log.Info("++++++++++Order Matched++++++++++")
-
 		if s.AssetId == event.Base {
-			event.BaseAmount.Add(amount)
+			event.BaseAmount = event.BaseAmount.Add(amount)
 		} else if s.AssetId == event.Quote {
-			event.QuoteAmount.Add(amount)
+			event.QuoteAmount = event.QuoteAmount.Add(amount)
 		} else {
 			panic(s.AssetId)
 		}
+
+		log.Info("++++++++++Order Matched++++++++++")
+		v, _ := prettyjson.Marshal(event)
+		log.Info("event", string(v))
+
 		it.End()
 	}
 	return nil
