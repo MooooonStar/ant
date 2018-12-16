@@ -294,8 +294,9 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
+	id := UuidWithString(exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
 	log.Infof("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.Round(8), exchange.Price, otc.Price, profit, Who(base), Who(quote))
-	id := UuidWithString(Who(base) + Who(quote) + exchange.Price.String() + exchange.Amount.String() + category)
+	log.Info("id+++++++", id)
 	ant.event <- &ProfitEvent{
 		ID:        id,
 		Category:  category,
