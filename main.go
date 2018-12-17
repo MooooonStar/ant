@@ -121,7 +121,6 @@ func main() {
 				ctx = SetDB(ctx, db)
 				db.AutoMigrate(&Snapshot{})
 				db.AutoMigrate(&Wallet{})
-				SaveProperty(ctx, db)
 
 				// ant demo
 				ant := NewAnt(enable)

@@ -18,7 +18,13 @@ func TestGetExinDepth(t *testing.T) {
 }
 
 func TestExinOrder(t *testing.T) {
-	order, err := GetExinOrder(context.TODO(), XIN, BTC)
+	order, err := GetExinOrder(context.TODO(), EOS, USDT)
+	assert.Nil(t, err)
+	fmt.Println("order", order)
+}
+
+func TestOceanTrade(t *testing.T) {
+	order, err := OceanTrade(PageSideBid, "0", "1", "M", EOS, BTC)
 	assert.Nil(t, err)
 	fmt.Println("order", order)
 }
@@ -82,8 +88,8 @@ func TestOrderMemo(t *testing.T) {
 	fmt.Println(action.A, action.B, action.O, action.S)
 
 	var order OceanOrder
-	order.Unpack("hKFBsMbQxygmJEKbjg3Z0ZtlkvqhU6FBoVCqMC4wMjYxMjA4OaFUoUw=")
-	fmt.Println("order", order)
+	order.Unpack("hKFToUGhUKozNDQwLjExNDU3oVShTKFBsIFbCxonZDc2j6pC1pT6Ygo=")
+	fmt.Println("order==", order)
 }
 
 func TestExinMemo(t *testing.T) {

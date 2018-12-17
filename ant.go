@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/md5"
-	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -84,7 +83,6 @@ func (ant *Ant) OnMessage(base, quote string) *OrderBook {
 }
 
 func (ant *Ant) Clean() {
-	log.Info("++++++++++Cancel orders before exit.+++++++++++", ant.orders)
 	for trace, ok := range ant.orders {
 		if !ok {
 			OceanCancel(trace)
@@ -93,7 +91,7 @@ func (ant *Ant) Clean() {
 	for it := ant.orderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
 		v, _ := prettyjson.Marshal(event)
-		fmt.Println("all event", string(v))
+		log.Info("all event:\n", string(v))
 	}
 }
 
@@ -175,15 +173,14 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 		case <-ticker.C:
 			for it := ant.orderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
-				if event.CreatedAt.Add(time.Duration(2 * event.Expire)).Before(time.Now()) {
-					log.Info("++++++++++++++++Expired+++++++++++++")
+				if event.CreatedAt.Add(time.Duration(event.Expire)).Before(time.Now()) {
 					amount := event.BaseAmount
 					send, get := event.Base, event.Quote
 					if !amount.IsPositive() {
 						amount = event.QuoteAmount
 						send, get = event.Quote, event.Base
 						if !amount.IsPositive() {
-							panic(amount)
+							continue
 						}
 					}
 
@@ -191,8 +188,10 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					balance := ant.assets[send]
 					ant.assetsLock.Unlock()
 					limited := LimitAmount(amount, balance, event.Min, event.Max)
+					if send == event.Quote {
+						limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
+					}
 
-					log.Infof("exin---amount: %v, send: %v, get: %v ---", limited.String(), Who(send), Who(get))
 					if !limited.IsPositive() {
 						log.Errorf("%s, balance: %v, min: %v, send: %v", Who(send), balance, event.Min, send)
 					} else {
@@ -238,11 +237,6 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		} else {
 			panic(s.AssetId)
 		}
-
-		log.Info("++++++++++Order Matched++++++++++")
-		v, _ := prettyjson.Marshal(event)
-		log.Info("event", string(v))
-
 		it.End()
 	}
 	return nil
@@ -305,7 +299,6 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 		return
 	}
 	id := UuidWithString(exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
-	log.Infof("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.Round(8), exchange.Price, otc.Price, profit, Who(base), Who(quote))
 	ant.event <- &ProfitEvent{
 		ID:        id,
 		Category:  category,

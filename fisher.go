@@ -40,7 +40,6 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 				amount = amount.Mul(decimal.NewFromFloat(2.0))
 				if len(otc.Asks) > 0 {
 					if price.GreaterThan(otc.Asks[0].Price) {
-						//log.Infof("!!!!!--find trade profit, amount %s, price %s, %s/%s, start fishing--!!!!!", trade.Amount, price, Who(base), Who(quote))
 						bidFishing := price.Sub(price.Sub(otc.Asks[0].Price).Mul(precent))
 						exchange := Order{
 							Price:  bidFishing.Truncate(-precision + 1),
@@ -52,7 +51,6 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 
 				if len(otc.Bids) > 0 {
 					if price.LessThan(otc.Bids[0].Price) {
-						//log.Infof("!!!!!--find trade profit, amount %s, price %s, %s/%s, start fishing--!!!!!!", trade.Amount, price, Who(base), Who(quote))
 						askFishing := price.Sub(price.Sub(otc.Bids[0].Price).Mul(precent))
 						exchange := Order{
 							Price:  askFishing.Truncate(-precision + 1),

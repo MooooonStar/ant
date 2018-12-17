@@ -198,7 +198,6 @@ func OceanTrade(side, price, amount, category, base, quote string, trace ...stri
 	if len(trace) == 1 {
 		traceId = trace[0]
 	}
-	log.Infof("-----order check passed, trace ----%s", traceId)
 
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     send,
@@ -211,7 +210,7 @@ func OceanTrade(side, price, amount, category, base, quote string, trace ...stri
 }
 
 func OceanCancel(trace string) error {
-	log.Infof("*****Cancel : %v", trace)
+	log.Infof("-----------Cancel : %v", trace)
 	order := OceanOrder{
 		O: uuid.Must(uuid.FromString(trace)),
 	}
