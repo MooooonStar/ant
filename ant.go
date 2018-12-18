@@ -149,6 +149,7 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 
 func LimitAmount(amount, balance, min, max decimal.Decimal) decimal.Decimal {
 	if amount.LessThanOrEqual(min) {
+		log.Errorf("amount too small, %v < min : %v", amount, min)
 		return decimal.Zero
 	}
 
