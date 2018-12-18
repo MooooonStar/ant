@@ -116,8 +116,6 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		}(exchangeOrder)
 	}()
 
-	ant.orders[exchangeOrder] = false
-
 	amount := e.Amount
 	ant.assetsLock.Lock()
 	baseBalance := ant.assets[e.Base]
@@ -132,6 +130,8 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 			amount = quoteBalance
 		}
 	}
+
+	ant.orders[exchangeOrder] = false
 	_, err := OceanTrade(e.Category, e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder)
 	if err != nil {
 		return err

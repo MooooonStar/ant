@@ -16,7 +16,7 @@ import (
 )
 
 var baseSymbols = []string{"EOS", "BTC", "XIN", "ETH"}
-var quoteSymbols = []string{"USDT", "BTC"}
+var quoteSymbols = []string{"BTC", "USDT"}
 
 func main() {
 	sig := make(chan os.Signal, 1)
@@ -131,6 +131,9 @@ func main() {
 					for _, quoteSymbol := range quoteSymbols {
 						base := GetAssetId(strings.ToUpper(baseSymbol))
 						quote := GetAssetId(strings.ToUpper(quoteSymbol))
+						if base == quote {
+							continue
+						}
 
 						client := NewClient(subctx, base, quote, ant.OnMessage(base, quote))
 						go client.ReceiveMessage(subctx)

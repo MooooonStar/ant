@@ -101,7 +101,7 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	}
 
 	v, _ := prettyjson.Marshal(s)
-	log.Info("find snapshot:", string(v))
+	log.Info("find snapshot:\n", string(v))
 
 	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
 		log.Error(err)
