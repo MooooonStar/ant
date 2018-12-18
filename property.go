@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/jinzhu/gorm"
@@ -24,7 +22,6 @@ type Wallet struct {
 	EOS       string    `gorm:"type:varchar(20);" json:"EOS"`
 	XIN       string    `gorm:"type:varchar(20);" json:"XIN"`
 	USDT      string    `gorm:"type:varchar(20);" json:"USDT"`
-	Total     string    `gorm:"type:varchar(20);" json:"total"`
 }
 
 func ReadAssets(ctx context.Context) (map[string]string, error) {
@@ -140,31 +137,10 @@ func SaveProperty(ctx context.Context, db *gorm.DB) error {
 		return err
 	}
 
-	var total decimal.Decimal
-	for asset, balance := range assets {
-		amount, _ := decimal.NewFromString(balance)
-		if !amount.IsPositive() {
-			continue
-		}
-
-		depth, err := GetExinDepth(ctx, asset, BTC)
-		if err != nil {
-			continue
-		}
-		if len(depth.Bids) == 0 {
-			continue
-		}
-		total = total.Add(amount.Mul(depth.Bids[0].Price))
-	}
-
-	amount, _ := decimal.NewFromString(assets[BTC])
-	total = total.Add(amount)
-
 	balance := make(map[string]string, 0)
 	for asset, amount := range assets {
 		balance[Who(asset)] = amount
 	}
-	balance["total"] = total.Round(5).String()
 
 	bt, err := json.Marshal(balance)
 	if err != nil {
