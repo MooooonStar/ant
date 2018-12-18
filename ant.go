@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	ProfitThreshold = 0.01 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
+	ProfitThreshold = 0.002 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
 	OceanFee        = 0.001
 	ExinFee         = 0.001
 	HuobiFee        = 0.001
@@ -193,7 +193,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					}
 
 					if !limited.IsPositive() {
-						log.Errorf("%s, balance: %v, min: %v, send: %v", Who(send), balance, event.Min, send)
+						log.Errorf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
 					} else {
 						if _, err := ExinTrade(limited.String(), send, get); err != nil {
 							log.Error(err)
