@@ -24,7 +24,7 @@ func TestExinOrder(t *testing.T) {
 }
 
 func TestOceanTrade(t *testing.T) {
-	order, err := OceanTrade(PageSideBid, "0", "1", "M", EOS, BTC)
+	order, err := OceanTrade(PageSideBid, "0", "0.0002", "M", EOS, BTC)
 	assert.Nil(t, err)
 	fmt.Println("order", order)
 }

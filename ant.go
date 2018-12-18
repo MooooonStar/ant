@@ -300,10 +300,11 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	}
 	id := UuidWithString(exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
 	ant.event <- &ProfitEvent{
-		ID:        id,
-		Category:  category,
-		Price:     exchange.Price,
-		Amount:    exchange.Amount,
+		ID:       id,
+		Category: category,
+		Price:    exchange.Price,
+		//多付款，保证扣完手续费后能全买下
+		Amount:    exchange.Amount.Mul(decimal.NewFromFloat(1.1)),
 		Min:       otc.Min,
 		Max:       otc.Max,
 		Profit:    profit,
