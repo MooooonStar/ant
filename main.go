@@ -149,7 +149,9 @@ func main() {
 				case <-sig:
 					cancel()
 					ant.Clean()
-					SaveProperty(subctx, db)
+					if err := SaveProperty(subctx, db); err != nil {
+						log.Error(err)
+					}
 					return nil
 				}
 			},

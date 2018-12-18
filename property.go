@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
+
+	"github.com/shopspring/decimal"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	prettyjson "github.com/hokaccha/go-prettyjson"
@@ -20,6 +24,7 @@ type Wallet struct {
 	EOS       string    `gorm:"type:varchar(20);" json:"EOS"`
 	XIN       string    `gorm:"type:varchar(20);" json:"XIN"`
 	USDT      string    `gorm:"type:varchar(20);" json:"USDT"`
+	Total     string    `gorm:"type:varchar(20);" json:"total"`
 }
 
 func ReadAssets(ctx context.Context) (map[string]string, error) {
@@ -52,6 +57,43 @@ func ReadAssets(ctx context.Context) (map[string]string, error) {
 		assets[item.AssetId] = item.Balance
 	}
 	return assets, nil
+}
+
+func GetExinPrices(ctx context.Context, quote string) (map[string]string, error) {
+	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?&base_asset=%s", quote)
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var response struct {
+		Data map[string]Ticker `json:"data"`
+	}
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, err
+	}
+	prices := make(map[string]string, 0)
+	for _, v := range response.Data {
+		prices[v.Base] = v.Price
+	}
+	return prices, nil
 }
 
 func ReadSnapshot(ctx context.Context, id string) (string, error) {
@@ -97,10 +139,33 @@ func SaveProperty(ctx context.Context, db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
+
+	var total decimal.Decimal
+	for asset, balance := range assets {
+		amount, _ := decimal.NewFromString(balance)
+		if !amount.IsPositive() {
+			continue
+		}
+
+		depth, err := GetExinDepth(ctx, asset, BTC)
+		if err != nil {
+			continue
+		}
+		if len(depth.Bids) == 0 {
+			continue
+		}
+		total = total.Add(amount.Mul(depth.Bids[0].Price))
+	}
+
+	amount, _ := decimal.NewFromString(assets[BTC])
+	total = total.Add(amount)
+
 	balance := make(map[string]string, 0)
 	for asset, amount := range assets {
 		balance[Who(asset)] = amount
 	}
+	balance["total"] = total.Round(5).String()
+
 	bt, err := json.Marshal(balance)
 	if err != nil {
 		return err
