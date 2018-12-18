@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -39,7 +38,6 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 				precision := price.Exponent()
 				amount, _ := decimal.NewFromString(trade.Amount)
 				amount = amount.Mul(decimal.NewFromFloat(2.0))
-				log.Info("why stop, asks", len(otc.Asks), "bids", len(otc.Bids))
 				if len(otc.Asks) > 0 {
 					if price.GreaterThan(otc.Asks[0].Price) {
 						bidFishing := price.Sub(price.Sub(otc.Asks[0].Price).Mul(precent))

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/emirpasic/gods/lists/arraylist"
-	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -86,11 +85,6 @@ func (ant *Ant) Clean() {
 		if !ok {
 			OceanCancel(trace)
 		}
-	}
-	for it := ant.orderQueue.Iterator(); it.Next(); {
-		event := it.Value().(*ProfitEvent)
-		v, _ := prettyjson.Marshal(event)
-		log.Info("all event:\n", string(v))
 	}
 }
 
