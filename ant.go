@@ -251,7 +251,6 @@ func (ant *Ant) Trade(ctx context.Context) error {
 		case e := <-ant.event:
 			if err := ant.trade(e); err != nil {
 				log.Error(err)
-				return err
 			}
 		}
 	}
@@ -299,7 +298,7 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 		return
 	}
 	id := UuidWithString(exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
-	ant.event <- &ProfitEvent{
+	event := ProfitEvent{
 		ID:       id,
 		Category: category,
 		Price:    exchange.Price,
@@ -312,6 +311,10 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 		Quote:     quote,
 		Expire:    expire,
 		CreatedAt: time.Now(),
+	}
+	select {
+	case ant.event <- &event:
+	case <-time.After(5 * time.Second):
 	}
 	return
 }
