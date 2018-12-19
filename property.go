@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
@@ -54,6 +56,43 @@ func ReadAssets(ctx context.Context) (map[string]string, error) {
 	return assets, nil
 }
 
+func GetExinPrices(ctx context.Context, quote string) (map[string]string, error) {
+	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?&base_asset=%s", quote)
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var response struct {
+		Data map[string]Ticker `json:"data"`
+	}
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, err
+	}
+	prices := make(map[string]string, 0)
+	for _, v := range response.Data {
+		prices[v.Base] = v.Price
+	}
+	return prices, nil
+}
+
 func ReadSnapshot(ctx context.Context, id string) (string, error) {
 	uri := "/network/snapshots/" + id
 	token, err := bot.SignAuthenticationToken(ClientId, SessionId, PrivateKey, "GET", uri, "")
@@ -97,10 +136,12 @@ func SaveProperty(ctx context.Context, db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
+
 	balance := make(map[string]string, 0)
 	for asset, amount := range assets {
 		balance[Who(asset)] = amount
 	}
+
 	bt, err := json.Marshal(balance)
 	if err != nil {
 		return err

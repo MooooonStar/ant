@@ -8,6 +8,7 @@ import (
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
 	uuid "github.com/satori/go.uuid"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 )
@@ -30,7 +31,7 @@ var (
 	F1exCore  = "32cc0fda-5deb-448a-be70-a81dac4a3eed"
 )
 
-type OceanOrderAction struct {
+type OceanOrder struct {
 	S string    // side
 	A uuid.UUID // asset
 	P string    // price
@@ -38,7 +39,7 @@ type OceanOrderAction struct {
 	O uuid.UUID // order
 }
 
-func (action *OceanOrderAction) Pack() string {
+func (action *OceanOrder) Pack() string {
 	order := make(map[string]interface{}, 0)
 	if action.O != uuid.Nil {
 		order["O"] = action.O
@@ -57,7 +58,7 @@ func (action *OceanOrderAction) Pack() string {
 	return base64.StdEncoding.EncodeToString(memo)
 }
 
-func (action *OceanOrderAction) Unpack(memo string) error {
+func (action *OceanOrder) Unpack(memo string) error {
 	byt, err := base64.StdEncoding.DecodeString(memo)
 	if err != nil {
 		return err
@@ -67,6 +68,35 @@ func (action *OceanOrderAction) Unpack(memo string) error {
 	decoder := codec.NewDecoderBytes(byt, handle)
 	return decoder.Decode(action)
 }
+
+type OceanTransfer struct {
+	S string    // source
+	O uuid.UUID // cancelled order
+	A uuid.UUID // matched ask order
+	B uuid.UUID // matched bid order
+}
+
+func (action *OceanTransfer) Pack() string {
+	memo := make([]byte, 140)
+	handle := new(codec.MsgpackHandle)
+	encoder := codec.NewEncoderBytes(&memo, handle)
+	if err := encoder.Encode(action); err != nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(memo)
+}
+
+func (action *OceanTransfer) Unpack(memo string) error {
+	byt, err := base64.StdEncoding.DecodeString(memo)
+	if err != nil {
+		return err
+	}
+
+	handle := new(codec.MsgpackHandle)
+	decoder := codec.NewDecoderBytes(byt, handle)
+	return decoder.Decode(action)
+}
+
 func QuotePrecision(assetId string) uint8 {
 	switch assetId {
 	case XIN:
@@ -95,7 +125,7 @@ func QuoteMinimum(assetId string) number.Decimal {
 	return number.Zero()
 }
 
-func OrderCheck(action OceanOrderAction, desireAmount, quote string) error {
+func OrderCheck(action OceanOrder, desireAmount, quote string) error {
 	if action.T != OrderTypeLimit && action.T != OrderTypeMarket {
 		return fmt.Errorf("the price type should be ether limit or market")
 	}
@@ -139,48 +169,24 @@ func OrderCheck(action OceanOrderAction, desireAmount, quote string) error {
 		}
 		amount = assetDecimal.Integer(AmountPrecision)
 		if action.T == OrderTypeLimit && price.Mul(amount).Decimal().Cmp(QuoteMinimum(quote)) < 0 {
-			fmt.Println(price.Decimal(), amount.Decimal(), price.Mul(amount).Decimal())
 			return fmt.Errorf("the amount should be greater than %v %s", QuoteMinimum(quote), quote)
 		}
 	}
 	return nil
 }
 
-func OceanBuy(price, amount, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("++++++Buy %s at price %12.8s, amount %12.8s, type: %s ", Who(base), price, amount, category)
-	order := OceanOrderAction{
-		S: "B",
-		A: uuid.Must(uuid.FromString(base)),
-		P: number.FromString(price).Round(PricePrecision).String(),
-		T: category,
+func OceanTrade(side, price, amount, category, base, quote string, trace ...string) (string, error) {
+	log.Infof("++++++%s %s at price %12.8s, amount %12.8s, type: %s ", side, Who(base), price, amount, category)
+	send, get, s := base, quote, "A"
+	if side == PageSideBid {
+		send, get, s = quote, base, "B"
 	}
+	p, _ := decimal.NewFromString(price)
 
-	if err := OrderCheck(order, fmt.Sprint(amount), quote); err != nil {
-		return "", err
-	}
-
-	traceId := uuid.Must(uuid.NewV4()).String()
-	if len(trace) == 1 {
-		traceId = trace[0]
-	}
-	log.Infof("-----buy trace ----%s", traceId)
-
-	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
-		AssetId:     quote,
-		RecipientId: OceanCore,
-		Amount:      number.FromString(amount).Round(AmountPrecision),
-		TraceId:     traceId,
-		Memo:        order.Pack(),
-	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
-	return traceId, err
-}
-
-func OceanSell(price, amount, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("-----Sell %s at price %12.8s, amount %12.8s, type: %s", Who(base), price, amount, category)
-	order := OceanOrderAction{
-		S: "A",
-		A: uuid.Must(uuid.FromString(quote)),
-		P: number.FromString(price).Round(PricePrecision).String(),
+	order := OceanOrder{
+		S: s,
+		A: uuid.Must(uuid.FromString(get)),
+		P: p.Round(PricePrecision).String(),
 		T: category,
 	}
 
@@ -193,9 +199,8 @@ func OceanSell(price, amount, category, base, quote string, trace ...string) (st
 		traceId = trace[0]
 	}
 
-	log.Infof("-----Sell trace ----%s", traceId)
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
-		AssetId:     base,
+		AssetId:     send,
 		RecipientId: OceanCore,
 		Amount:      number.FromString(amount).Round(AmountPrecision),
 		TraceId:     traceId,
@@ -205,8 +210,8 @@ func OceanSell(price, amount, category, base, quote string, trace ...string) (st
 }
 
 func OceanCancel(trace string) error {
-	log.Infof("*****Cancel : %v", trace)
-	order := OceanOrderAction{
+	log.Infof("-----------Cancel : %v", trace)
+	order := OceanOrder{
 		O: uuid.Must(uuid.FromString(trace)),
 	}
 	cancelTrace := uuid.Must(uuid.NewV4()).String()

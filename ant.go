@@ -7,54 +7,61 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
+	"github.com/emirpasic/gods/lists/arraylist"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	ProfitThreshold    = 0.005 / (1 - OceanFee) / (1 - ExinFee) / (1 - HuobiFee)
-	OceanFee           = 0.001
-	ExinFee            = 0.001
-	HuobiFee           = 0.001
-	OrderConfirmedTime = 8 * time.Second
+	ProfitThreshold = 0.01 / (1 - OceanFee) / (1 - ExinFee)
+	OceanFee        = 0.001
+	ExinFee         = 0.003
+	OrderExpireTime = int64(5 * time.Second)
 )
 
 type ProfitEvent struct {
-	ID       string          `json:"-"`
-	Category string          `json:"category"`
-	Price    decimal.Decimal `json:"price"`
-	Profit   decimal.Decimal `json:"profit"`
-	Amount   decimal.Decimal `json:"amount"`
-	Base     string          `json:"base"`
-	Quote    string          `json:"quote"`
+	ID            string          `json:"-"`
+	Category      string          `json:"category"`
+	Price         decimal.Decimal `json:"price"`
+	Profit        decimal.Decimal `json:"profit"`
+	Amount        decimal.Decimal `json:"amount"`
+	Min           decimal.Decimal `json:"min"`
+	Max           decimal.Decimal `json:"max"`
+	Base          string          `json:"base"`
+	Quote         string          `json:"quote"`
+	CreatedAt     time.Time       `json:"created_at"`
+	Expire        int64           `json:"expire"`
+	BaseAmount    decimal.Decimal `json:"base_amount"`
+	QuoteAmount   decimal.Decimal `json:"quote_amount"`
+	ExchangeOrder string          `json:"exchange_order"`
 }
 
 type Ant struct {
 	//是否开启交易
-	Enable bool
+	enable bool
 	//发现套利机会
-	event     chan *ProfitEvent
+	event chan *ProfitEvent
+	//所有交易的snapshot_id
 	snapshots map[string]bool
-	orders    map[string]bool
+	//机器人向ocean.one交易的trace_id
+	orders map[string]bool
 	//买单和卖单的红黑树，生成深度用
-	books         map[string]*OrderBook
-	assets        map[string]decimal.Decimal
-	matchedAmount chan decimal.Decimal
-	assetsLock    sync.Mutex
-	orderLock     sync.Mutex
+	books      map[string]*OrderBook
+	orderQueue *arraylist.List
+	assetsLock sync.Mutex
+	assets     map[string]decimal.Decimal
 }
 
 func NewAnt(enable bool) *Ant {
 	return &Ant{
-		Enable:        enable,
-		event:         make(chan *ProfitEvent, 0),
-		snapshots:     make(map[string]bool, 0),
-		orders:        make(map[string]bool, 0),
-		books:         make(map[string]*OrderBook, 0),
-		assets:        make(map[string]decimal.Decimal, 0),
-		matchedAmount: make(chan decimal.Decimal, 0),
+		enable:     enable,
+		event:      make(chan *ProfitEvent, 10),
+		snapshots:  make(map[string]bool, 0),
+		orders:     make(map[string]bool, 0),
+		books:      make(map[string]*OrderBook, 0),
+		assets:     make(map[string]decimal.Decimal, 0),
+		orderQueue: arraylist.New(),
 	}
 }
 
@@ -74,7 +81,6 @@ func (ant *Ant) OnMessage(base, quote string) *OrderBook {
 }
 
 func (ant *Ant) Clean() {
-	log.Info("++++++++++Cancel orders before exit.", ant.orders)
 	for trace, ok := range ant.orders {
 		if !ok {
 			OceanCancel(trace)
@@ -87,56 +93,151 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 	if _, ok := ant.orders[exchangeOrder]; ok {
 		return nil
 	}
-	defer func() {
-		ant.orderLock.Lock()
-		ant.orders[exchangeOrder] = true
-		ant.orderLock.Unlock()
-		OceanCancel(exchangeOrder)
-	}()
 
-	v, _ := prettyjson.Marshal(e)
-	log.Infof("profit found, %s/%s\n  %s", Who(e.Base), Who(e.Quote), string(v))
-
-	if !ant.Enable {
+	if !ant.enable {
 		ant.orders[exchangeOrder] = true
 		return nil
 	}
 
-	ant.orders[exchangeOrder] = false
-	switch e.Category {
-	case PageSideBid:
-		amount := e.Amount.Mul(e.Price)
-		if _, err := OceanBuy(e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
-			return err
+	defer func() {
+		go func(trace string) {
+			select {
+			case <-time.After(time.Duration(OrderExpireTime)):
+				OceanCancel(trace)
+				ant.orders[exchangeOrder] = true
+			}
+		}(exchangeOrder)
+	}()
+
+	amount := e.Amount
+	ant.assetsLock.Lock()
+	baseBalance := ant.assets[e.Base]
+	quoteBalance := ant.assets[e.Quote]
+	ant.assetsLock.Unlock()
+	if amount.GreaterThan(baseBalance) {
+		amount = baseBalance
+	}
+	if e.Category == PageSideBid {
+		amount = e.Amount.Mul(e.Price)
+		if amount.GreaterThan(quoteBalance) {
+			amount = quoteBalance
 		}
-	case PageSideAsk:
-		if _, err := OceanSell(e.Price.String(), e.Amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder); err != nil {
-			return err
-		}
-	default:
-		panic(e)
 	}
 
-	select {
-	case amount := <-ant.matchedAmount:
-		ant.orderLock.Lock()
-		ant.orders[exchangeOrder] = true
-		ant.orderLock.Unlock()
+	ant.orders[exchangeOrder] = false
+	_, err := OceanTrade(e.Category, e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder)
+	if err != nil {
+		return err
+	}
 
-		otcOrder := UuidWithString(e.ID + ExinCore)
-		send, get := e.Base, e.Quote
-		if e.Category == PageSideAsk {
-			send, get = e.Quote, e.Base
+	amount = amount.Mul(decimal.NewFromFloat(-1.0))
+	if e.Category == PageSideBid {
+		e.QuoteAmount = amount
+	} else {
+		e.BaseAmount = amount
+	}
+	e.ExchangeOrder = exchangeOrder
+	ant.orderQueue.Add(e)
+	return nil
+}
+
+func LimitAmount(amount, balance, min, max decimal.Decimal) decimal.Decimal {
+	if amount.LessThanOrEqual(min) {
+		log.Errorf("amount too small, %v < min : %v", amount, min)
+		return decimal.Zero
+	}
+
+	less := max
+	if max.GreaterThan(balance) {
+		less = balance
+	}
+	if amount.GreaterThan(less) {
+		return less
+	}
+	return amount
+}
+
+func (ant *Ant) OnExpire(ctx context.Context) error {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			for it := ant.orderQueue.Iterator(); it.Next(); {
+				event := it.Value().(*ProfitEvent)
+				if event.CreatedAt.Add(time.Duration(event.Expire)).Before(time.Now()) {
+					amount := event.BaseAmount
+					send, get := event.Base, event.Quote
+					if !amount.IsPositive() {
+						amount = event.QuoteAmount
+						send, get = event.Quote, event.Base
+						if !amount.IsPositive() {
+							continue
+						}
+					}
+
+					ant.assetsLock.Lock()
+					balance := ant.assets[send]
+					ant.assetsLock.Unlock()
+					limited := LimitAmount(amount, balance, event.Min, event.Max)
+					if send == event.Quote {
+						limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
+					}
+
+					if !limited.IsPositive() {
+						log.Errorf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
+					} else {
+						if _, err := ExinTrade(limited.String(), send, get); err != nil {
+							log.Error(err)
+							continue
+						}
+					}
+					ant.orderQueue.Remove(it.Index())
+					ant.orders[event.ExchangeOrder] = true
+				}
+			}
 		}
-		if _, err := ExinTrade(amount.String(), send, get, otcOrder); err != nil {
-			log.Error(err)
+	}
+}
+
+func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
+	if s.SnapshotId == ExinCore {
+		return nil
+	}
+	amount, _ := decimal.NewFromString(s.Amount)
+	if amount.IsNegative() {
+		return nil
+	}
+
+	for it := ant.orderQueue.Iterator(); it.Next(); {
+		event := it.Value().(*ProfitEvent)
+		var order OceanTransfer
+		if err := order.Unpack(s.Data); err != nil {
+			return err
 		}
-	case <-time.After(OrderConfirmedTime):
+
+		if event.ExchangeOrder != order.A.String() &&
+			event.ExchangeOrder != order.B.String() &&
+			event.ExchangeOrder != order.O.String() {
+			continue
+		}
+
+		if s.AssetId == event.Base {
+			event.BaseAmount = event.BaseAmount.Add(amount)
+		} else if s.AssetId == event.Quote {
+			event.QuoteAmount = event.QuoteAmount.Add(amount)
+		} else {
+			panic(s.AssetId)
+		}
+		it.End()
 	}
 	return nil
 }
 
 func (ant *Ant) Trade(ctx context.Context) error {
+	go ant.OnExpire(ctx)
 	for {
 		select {
 		case <-ctx.Done():
@@ -144,7 +245,6 @@ func (ant *Ant) Trade(ctx context.Context) error {
 		case e := <-ant.event:
 			if err := ant.trade(e); err != nil {
 				log.Error(err)
-				return err
 			}
 		}
 	}
@@ -160,11 +260,11 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 				pair := base + "-" + quote
 				if exchange := ant.books[pair].GetDepth(3); exchange != nil {
 					if len(exchange.Bids) > 0 && len(otc.Asks) > 0 {
-						ant.Strategy(ctx, exchange.Bids[0], otc.Asks[0], base, quote, PageSideBid)
+						ant.Inspect(ctx, exchange.Bids[0], otc.Asks[0], base, quote, PageSideBid, OrderExpireTime)
 					}
 
 					if len(exchange.Asks) > 0 && len(otc.Bids) > 0 {
-						ant.Strategy(ctx, exchange.Asks[0], otc.Bids[0], base, quote, PageSideAsk)
+						ant.Inspect(ctx, exchange.Asks[0], otc.Bids[0], base, quote, PageSideAsk, OrderExpireTime)
 					}
 				}
 			}
@@ -173,29 +273,14 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 	}
 }
 
-func LimitAmount(amount, balance, min, max decimal.Decimal) decimal.Decimal {
-	if amount.LessThanOrEqual(min) {
-		return decimal.Zero
-	}
-
-	less := max
-	if max.GreaterThan(balance) {
-		less = balance
-	}
-	if amount.GreaterThan(less) {
-		return less
-	}
-	return amount
-}
-
-func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote string, side string) {
+func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote string, side string, expire int64) {
 	var category string
 	if side == PageSideBid {
 		category = PageSideAsk
 	} else if side == PageSideAsk {
 		category = PageSideBid
 	} else {
-		return
+		panic(category)
 	}
 
 	profit := exchange.Price.Sub(otc.Price).Div(otc.Price)
@@ -206,27 +291,24 @@ func (ant *Ant) Strategy(ctx context.Context, exchange, otc Order, base, quote s
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
-
-	ant.assetsLock.Lock()
-	balance := ant.assets[base]
-	if category == PageSideBid {
-		balance = ant.assets[quote].Div(exchange.Price)
-	}
-	ant.assetsLock.Unlock()
-	amount := LimitAmount(exchange.Amount, balance, otc.Min, otc.Max)
-
-	if !amount.IsPositive() {
-		return
-	}
-	id := UuidWithString(Who(base) + Who(quote) + exchange.Price.String() + exchange.Amount.String() + category)
-	ant.event <- &ProfitEvent{
+	id := UuidWithString(exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
+	event := ProfitEvent{
 		ID:       id,
 		Category: category,
 		Price:    exchange.Price,
-		Amount:   amount,
-		Profit:   profit,
-		Base:     base,
-		Quote:    quote,
+		//多付款，保证扣完手续费后能全买下
+		Amount:    exchange.Amount.Mul(decimal.NewFromFloat(1.1)),
+		Min:       otc.Min,
+		Max:       otc.Max,
+		Profit:    profit,
+		Base:      base,
+		Quote:     quote,
+		Expire:    expire,
+		CreatedAt: time.Now(),
+	}
+	select {
+	case ant.event <- &event:
+	case <-time.After(5 * time.Second):
 	}
 	return
 }

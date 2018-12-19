@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,10 +9,7 @@ import (
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
-	uuid "github.com/satori/go.uuid"
-	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"github.com/ugorji/go/codec"
 )
 
 const (
@@ -21,47 +17,23 @@ const (
 	CheckpointMixinNetworkSnapshots = "exchange-checkpoint-mixin-network-snapshots"
 )
 
-type TransferAction struct {
-	S string    // source
-	O uuid.UUID // cancelled order
-	A uuid.UUID // matched ask order
-	B uuid.UUID // matched bid order
-}
-
-func (action *TransferAction) Pack() string {
-	memo := make([]byte, 140)
-	handle := new(codec.MsgpackHandle)
-	encoder := codec.NewEncoderBytes(&memo, handle)
-	if err := encoder.Encode(action); err != nil {
-		return ""
-	}
-	return base64.StdEncoding.EncodeToString(memo)
-}
-
-func (action *TransferAction) Unpack(memo string) error {
-	byt, err := base64.StdEncoding.DecodeString(memo)
-	if err != nil {
-		return err
-	}
-
-	handle := new(codec.MsgpackHandle)
-	decoder := codec.NewDecoderBytes(byt, handle)
-	return decoder.Decode(action)
-}
-
 type Asset struct {
 	AssetId string `json:"asset_id"               gorm:"type:varchar(36)"`
 }
 
 type Snapshot struct {
-	SnapshotId string `json:"snapshot_id"      gorm:"primary_key;type:varchar(36)"`
-	Amount     string `json:"amount"           gorm:"type:varchar(36)"`
-	TraceId    string `json:"trace_id"         gorm:"type:varchar(36)"`
-	UserId     string `json:"user_id"          gorm:"type:varchar(36)"`
-	OpponentId string `json:"opponent_id"      gorm:"type:varchar(36)"`
-	Data       string `json:"data"             gorm:"type:varchar(255)"`
+	SnapshotId string    `json:"snapshot_id"      gorm:"primary_key;type:varchar(36)"`
+	Amount     string    `json:"amount"           gorm:"type:varchar(36)"`
+	TraceId    string    `json:"trace_id"         gorm:"type:varchar(36)"`
+	UserId     string    `json:"user_id"          gorm:"type:varchar(36)"`
+	OpponentId string    `json:"opponent_id"      gorm:"type:varchar(36)"`
+	Data       string    `json:"data"             gorm:"type:varchar(255)"`
+	CreatedAt  time.Time `json:"created_at"       gorm:"type:timestamp"`
 	Asset      `json:"asset"            gorm:"type:varchar(36)"`
-	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (Snapshot) TableName() string {
+	return "bot_snapshots"
 }
 
 func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, limit int) ([]*Snapshot, error) {
@@ -124,47 +96,21 @@ func (ex *Ant) ensureProcessSnapshot(ctx context.Context, s *Snapshot) {
 }
 
 func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
-	if len(s.OpponentId) == 0 || len(s.Data) == 0 {
-		return nil
-	}
-
-	if s.Asset.AssetId == CNB {
+	if len(s.OpponentId) == 0 || len(s.Data) == 0 || s.Asset.AssetId == CNB {
 		return nil
 	}
 
 	v, _ := prettyjson.Marshal(s)
-	log.Info("find snapshot:", string(v))
+	log.Info("find snapshot:\n", string(v))
 
 	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
-		//return err
-		log.Println(err)
-		return nil
+		log.Error(err)
+		return err
 	}
 
-	var order TransferAction
-	if err := order.Unpack(s.Data); err != nil {
-		return nil
+	if err := ex.HandleSnapshot(ctx, s); err != nil {
+		log.Error(err)
+		return err
 	}
-
-	if order.S != "MATCH" {
-		return nil
-	}
-
-	amount, _ := decimal.NewFromString(s.Amount)
-	ex.orderLock.Lock()
-	defer ex.orderLock.Unlock()
-	//一个订单可能对应多笔成交，只正常处理第一笔
-	if bidFinished, bidOK := ex.orders[order.B.String()]; bidOK {
-		if !bidFinished {
-			log.Info("order matched,", order)
-			ex.matchedAmount <- amount
-		}
-	} else if askFinished, askOK := ex.orders[order.A.String()]; askOK {
-		if !askFinished {
-			log.Info("order matched,", order)
-			ex.matchedAmount <- amount
-		}
-	}
-
 	return nil
 }

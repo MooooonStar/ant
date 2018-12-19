@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 
 	"github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
@@ -16,11 +15,11 @@ const (
 	ExinCore = "61103d28-3ac2-44a2-ae34-bd956070dab1"
 )
 
-type ExinOrderAction struct {
+type ExinOrder struct {
 	A uuid.UUID // asset uuid
 }
 
-func (order *ExinOrderAction) Pack() string {
+func (order *ExinOrder) Pack() string {
 	pack, err := msgpack.Marshal(order)
 	if err != nil {
 		return ""
@@ -29,7 +28,7 @@ func (order *ExinOrderAction) Pack() string {
 	return base64.StdEncoding.EncodeToString(pack)
 }
 
-func (order *ExinOrderAction) Unpack(memo string) error {
+func (order *ExinOrder) Unpack(memo string) error {
 	parsedpack, err := base64.StdEncoding.DecodeString(memo)
 	if err != nil {
 		return err
@@ -42,14 +41,14 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	if len(trace) == 1 {
 		traceId = trace[0]
 	}
-	order := ExinOrderAction{
+	order := ExinOrder{
 		A: uuid.Must(uuid.FromString(get)),
 	}
 
-	precision := ExinAssetPrecision(send)
+	precision := ExinAssetPrecision(send, get)
 	a := number.FromString(amount).Round(precision)
 
-	log.Infof("trade in exin, %s, send %s, get %s", a, Who(send), Who(get))
+	log.Infof("=============trade in exin, %s, send %s, get %s", a, Who(send), Who(get))
 	transfer := bot.TransferInput{
 		AssetId:     send,
 		RecipientId: ExinCore,
@@ -60,42 +59,29 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
-//实际exin上不同交易对的精度不一样，这里简单处理了
-func ExinAssetPrecision(assetId string) int32 {
-	switch assetId {
-	case XIN:
-		return 4
-	case ETH:
-		return 4
-	case BTC:
-		return 4
-	case USDT:
+func ExinAssetPrecision(send, get string) int32 {
+	if send == USDT {
 		return 2
-	case EOS:
-		return 2
-	default:
-		log.Panicln("AssetPrecision", assetId)
 	}
-	return 0
-}
 
-func ExinTradeMessager(side string, amount float64, base, quote string) (string, error) {
-	memo := fmt.Sprintf("ExinOne %s/%s %s", Who(base), Who(quote), side)
-	trace := uuid.Must(uuid.NewV4()).String()
-	var asset string
-	if side == "buy" {
-		asset = quote
-	} else if side == "sell" {
-		asset = base
-	} else {
-		panic("invlid type")
+	if get == USDT {
+		return 4
 	}
-	transfer := bot.TransferInput{
-		AssetId:     asset,
-		RecipientId: ExinCore,
-		Amount:      number.FromFloat(amount),
-		TraceId:     trace,
-		Memo:        memo,
+
+	if send == BTC {
+		if get == XIN {
+			return 4
+		}
+		return 6
 	}
-	return trace, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+
+	if send == ETH || send == XIN {
+		return 4
+	}
+
+	if send == EOS {
+		return 2
+	}
+
+	return 0
 }

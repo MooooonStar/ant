@@ -15,8 +15,8 @@ import (
 	"github.com/urfave/cli"
 )
 
-var baseSymbols = []string{"EOS", "BTC", "XIN", "ETH"}
-var quoteSymbols = []string{"USDT", "BTC"}
+var baseSymbols = []string{"BTC", "EOS", "XIN", "ETH"}
+var quoteSymbols = []string{"BTC", "USDT"}
 
 func main() {
 	sig := make(chan os.Signal, 1)
@@ -121,8 +121,8 @@ func main() {
 				ctx = SetDB(ctx, db)
 				db.AutoMigrate(&Snapshot{})
 				db.AutoMigrate(&Wallet{})
-				SaveProperty(ctx, db)
 
+				// ant demo
 				ant := NewAnt(enable)
 				subctx, cancel := context.WithCancel(ctx)
 				go ant.PollMixinNetwork(subctx)
@@ -131,21 +131,27 @@ func main() {
 					for _, quoteSymbol := range quoteSymbols {
 						base := GetAssetId(strings.ToUpper(baseSymbol))
 						quote := GetAssetId(strings.ToUpper(quoteSymbol))
+						if base == quote {
+							continue
+						}
 
 						client := NewClient(subctx, base, quote, ant.OnMessage(base, quote))
-						go client.Receive(subctx)
+						go client.ReceiveMessage(subctx)
 
 						go ant.Watching(subctx, base, quote)
 						go ant.Fishing(subctx, base, quote)
 					}
 				}
 				go ant.Trade(subctx)
+
 				//ctrl-c 退出时先取消订单
 				select {
 				case <-sig:
 					cancel()
 					ant.Clean()
-					SaveProperty(subctx, db)
+					if err := SaveProperty(subctx, db); err != nil {
+						log.Error(err)
+					}
 					return nil
 				}
 			},
