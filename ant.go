@@ -323,7 +323,7 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 		Category: category,
 		Price:    exchange.Price,
 		//多付款，保证扣完手续费后能全买下
-		Amount:      exchange.Amount.Mul(decimal.NewFromFloat(1.1)),
+		Amount:      exchange.Amount.Mul(decimal.NewFromFloat(1.1)).Round(8),
 		Min:         otc.Min,
 		Max:         otc.Max,
 		Profit:      profit,
