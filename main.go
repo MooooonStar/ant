@@ -84,7 +84,8 @@ func main() {
 			Usage: "find profits between different exchanges",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "pair"},
-				cli.BoolFlag{Name: "enable"},
+				cli.BoolFlag{Name: "ocean"},
+				cli.BoolFlag{Name: "exin"},
 				cli.BoolFlag{Name: "debug"},
 				cli.BoolFlag{Name: "file"},
 			},
