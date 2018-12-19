@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 
-	"github.com/MixinNetwork/bot-api-go-client"
+	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
@@ -48,7 +48,7 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	precision := ExinAssetPrecision(send, get)
 	a := number.FromString(amount).Round(precision)
 
-	log.Infof("=============trade in exin, %s, send %s, get %s", a, Who(send), Who(get))
+	log.Infof("=============trade in exin, %s, send %s, get %s, trace: %s", a, Who(send), Who(get), traceId)
 	transfer := bot.TransferInput{
 		AssetId:     send,
 		RecipientId: ExinCore,

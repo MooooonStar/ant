@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
+
+	bot "github.com/MixinNetwork/bot-api-go-client"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,7 +34,7 @@ type Snapshot struct {
 }
 
 func (Snapshot) TableName() string {
-	return "bot_snapshots"
+	return "why_snapshots"
 }
 
 func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, limit int) ([]*Snapshot, error) {
@@ -66,7 +67,7 @@ func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 	for {
 		snapshots, err := ex.requestMixinNetwork(ctx, checkpoint, limit)
 		if err != nil {
-			log.Println("PollMixinNetwork ERROR", err)
+			log.Error("PollMixinNetwork ERROR", err)
 			time.Sleep(PollInterval)
 			continue
 		}
@@ -101,7 +102,7 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	}
 
 	v, _ := prettyjson.Marshal(s)
-	log.Info("find snapshot:\n", string(v))
+	log.Info("snapshot", string(v))
 
 	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
 		log.Error(err)

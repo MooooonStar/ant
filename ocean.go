@@ -176,7 +176,6 @@ func OrderCheck(action OceanOrder, desireAmount, quote string) error {
 }
 
 func OceanTrade(side, price, amount, category, base, quote string, trace ...string) (string, error) {
-	log.Infof("++++++%s %s at price %12.8s, amount %12.8s, type: %s ", side, Who(base), price, amount, category)
 	send, get, s := base, quote, "A"
 	if side == PageSideBid {
 		send, get, s = quote, base, "B"
@@ -198,7 +197,7 @@ func OceanTrade(side, price, amount, category, base, quote string, trace ...stri
 	if len(trace) == 1 {
 		traceId = trace[0]
 	}
-
+	log.Infof("++++++%s %s at price %12.8s, amount %12.8s, type: %s, trace: %s ", side, Who(base), price, amount, category, traceId)
 	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     send,
 		RecipientId: OceanCore,

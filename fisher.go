@@ -20,6 +20,7 @@ type Trade struct {
 
 //Exin上价格在变动，导致钓鱼单的价格也会变化，造成ocean.one上一笔成交生成多笔钓鱼单，待优化
 func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
+	orders := make(map[string]bool, 0)
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -30,6 +31,10 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 			precent := decimal.NewFromFloat(LowerPercent)
 			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
 				trade := ant.GetOceanTrade(ctx, base, quote)
+				if _, ok := orders[trade.CreateAt]; ok {
+					continue
+				}
+
 				ts, err := time.Parse(time.RFC3339Nano, trade.CreateAt)
 				if err != nil || ts.Add(5*time.Minute).Before(time.Now()) {
 					continue
@@ -59,6 +64,7 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 						ant.Inspect(ctx, exchange, otc.Bids[0], base, quote, PageSideAsk, 10*OrderExpireTime)
 					}
 				}
+				orders[trade.CreateAt] = true
 			}
 		}
 	}

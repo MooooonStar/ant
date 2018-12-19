@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var baseSymbols = []string{"BTC", "EOS", "XIN", "ETH"}
+var baseSymbols = []string{"BTC", "EOS", "ETH"}
 var quoteSymbols = []string{"BTC", "USDT"}
 
 func main() {
@@ -101,7 +101,8 @@ func main() {
 				}
 
 				pair := c.String("pair")
-				enable := c.Bool("enable")
+				ocean := c.Bool("ocean")
+				exin := c.Bool("exin")
 				symbols := strings.Split(pair, "/")
 				var baseSymbol, quoteSymbol string
 				if len(symbols) == 2 {
@@ -114,7 +115,7 @@ func main() {
 				}
 
 				ctx := context.Background()
-				db, err := gorm.Open("mysql", "root:@/snow")
+				db, err := gorm.Open("mysql", "root:@/snow?parseTime=true")
 				if err != nil {
 					panic(err)
 				}
@@ -123,7 +124,7 @@ func main() {
 				db.AutoMigrate(&Wallet{})
 
 				// ant demo
-				ant := NewAnt(enable)
+				ant := NewAnt(ocean, exin)
 				subctx, cancel := context.WithCancel(ctx)
 				go ant.PollMixinNetwork(subctx)
 				go ant.UpdateBalance(subctx)

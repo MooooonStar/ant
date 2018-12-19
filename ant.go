@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"crypto/md5"
+	"fmt"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/hokaccha/go-prettyjson"
 
 	"github.com/emirpasic/gods/lists/arraylist"
 	uuid "github.com/satori/go.uuid"
@@ -39,7 +42,8 @@ type ProfitEvent struct {
 
 type Ant struct {
 	//是否开启交易
-	enable bool
+	enableOcean bool
+	enableExin  bool
 	//发现套利机会
 	event chan *ProfitEvent
 	//所有交易的snapshot_id
@@ -53,15 +57,16 @@ type Ant struct {
 	assets     map[string]decimal.Decimal
 }
 
-func NewAnt(enable bool) *Ant {
+func NewAnt(ocean, exin bool) *Ant {
 	return &Ant{
-		enable:     enable,
-		event:      make(chan *ProfitEvent, 10),
-		snapshots:  make(map[string]bool, 0),
-		orders:     make(map[string]bool, 0),
-		books:      make(map[string]*OrderBook, 0),
-		assets:     make(map[string]decimal.Decimal, 0),
-		orderQueue: arraylist.New(),
+		enableOcean: ocean,
+		enableExin:  exin,
+		event:       make(chan *ProfitEvent, 10),
+		snapshots:   make(map[string]bool, 0),
+		orders:      make(map[string]bool, 0),
+		books:       make(map[string]*OrderBook, 0),
+		assets:      make(map[string]decimal.Decimal, 0),
+		orderQueue:  arraylist.New(),
 	}
 }
 
@@ -86,6 +91,11 @@ func (ant *Ant) Clean() {
 			OceanCancel(trace)
 		}
 	}
+	for it := ant.orderQueue.Iterator(); it.Next(); {
+		event := it.Value().(*ProfitEvent)
+		v, _ := prettyjson.Marshal(event)
+		log.Println("event:", string(v))
+	}
 }
 
 func (ant *Ant) trade(e *ProfitEvent) error {
@@ -94,7 +104,7 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		return nil
 	}
 
-	if !ant.enable {
+	if !ant.enableOcean {
 		ant.orders[exchangeOrder] = true
 		return nil
 	}
@@ -103,8 +113,9 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		go func(trace string) {
 			select {
 			case <-time.After(time.Duration(OrderExpireTime)):
-				OceanCancel(trace)
-				ant.orders[exchangeOrder] = true
+				if err := OceanCancel(trace); err == nil {
+					ant.orders[exchangeOrder] = true
+				}
 			}
 		}(exchangeOrder)
 	}()
@@ -165,9 +176,11 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
+			expired := make([]int, 0)
 			for it := ant.orderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Before(time.Now()) {
+					expired = append(expired, it.Index())
 					amount := event.BaseAmount
 					send, get := event.Base, event.Quote
 					if !amount.IsPositive() {
@@ -177,6 +190,9 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 							continue
 						}
 					}
+
+					v, _ := prettyjson.Marshal(event)
+					log.Info("string", string(v))
 
 					ant.assetsLock.Lock()
 					balance := ant.assets[send]
@@ -194,9 +210,11 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 							continue
 						}
 					}
-					ant.orderQueue.Remove(it.Index())
 					ant.orders[event.ExchangeOrder] = true
 				}
+			}
+			for _, idx := range expired {
+				ant.orderQueue.Remove(idx)
 			}
 		}
 	}
@@ -237,7 +255,9 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 }
 
 func (ant *Ant) Trade(ctx context.Context) error {
-	go ant.OnExpire(ctx)
+	if ant.enableExin {
+		go ant.OnExpire(ctx)
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -287,10 +307,16 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	if side == PageSideAsk {
 		profit = profit.Mul(decimal.NewFromFloat(-1.0))
 	}
-	log.Debugf("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.Round(8), exchange.Price, otc.Price, profit, Who(base), Who(quote))
+
+	msg := fmt.Sprintf("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.String(), exchange.Price, otc.Price, profit, Who(base), Who(quote))
+	if profit.IsPositive() {
+		log.Debug(msg)
+	}
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
+	log.Info(msg)
+
 	id := UuidWithString(exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
 	event := ProfitEvent{
 		ID:       id,
