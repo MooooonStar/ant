@@ -297,14 +297,16 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 		Category: category,
 		Price:    exchange.Price,
 		//多付款，保证扣完手续费后能全买下
-		Amount:    exchange.Amount.Mul(decimal.NewFromFloat(1.1)),
-		Min:       otc.Min,
-		Max:       otc.Max,
-		Profit:    profit,
-		Base:      base,
-		Quote:     quote,
-		Expire:    expire,
-		CreatedAt: time.Now(),
+		Amount:      exchange.Amount.Mul(decimal.NewFromFloat(1.1)),
+		Min:         otc.Min,
+		Max:         otc.Max,
+		Profit:      profit,
+		Base:        base,
+		Quote:       quote,
+		Expire:      expire,
+		CreatedAt:   time.Now(),
+		BaseAmount:  decimal.Zero,
+		QuoteAmount: decimal.Zero,
 	}
 	select {
 	case ant.event <- &event:
