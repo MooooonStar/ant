@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
@@ -57,6 +58,26 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 		Memo:        order.Pack(),
 	}
 	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+}
+
+func ExinTradeMessager(side, amount, base, quote string) (string, error) {
+	memo := fmt.Sprintf("ExinOne %s/%s %s", Who(base), Who(quote), side)
+	trace := uuid.Must(uuid.NewV4()).String()
+	send, get := base, quote
+	if side == "buy" {
+		send, get = quote, base
+	}
+	precision := ExinAssetPrecision(send, get)
+	a := number.FromString(amount).Round(precision)
+
+	transfer := bot.TransferInput{
+		AssetId:     send,
+		RecipientId: ExinCore,
+		Amount:      a,
+		TraceId:     trace,
+		Memo:        memo,
+	}
+	return trace, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
 func ExinAssetPrecision(send, get string) int32 {

@@ -93,9 +93,7 @@ func TestOrderMemo(t *testing.T) {
 }
 
 func TestExinMemo(t *testing.T) {
-	var order ExinOrder
-	order.Unpack("gaFBxBDG0McoJiRCm44N2dGbZZL6")
-	fmt.Println("order", order)
+	ExinTradeMessager("buy", "2", EOS, USDT)
 }
 
 func TestReadAssets(t *testing.T) {

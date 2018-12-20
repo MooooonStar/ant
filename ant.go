@@ -192,7 +192,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					}
 
 					v, _ := prettyjson.Marshal(event)
-					log.Info("string", string(v))
+					log.Info("event", string(v))
 
 					ant.assetsLock.Lock()
 					balance := ant.assets[send]
@@ -309,9 +309,7 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	}
 
 	msg := fmt.Sprintf("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.String(), exchange.Price, otc.Price, profit, Who(base), Who(quote))
-	if profit.IsPositive() {
-		log.Debug(msg)
-	}
+	log.Debug(msg)
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
