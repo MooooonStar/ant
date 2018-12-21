@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	ExinCore = "61103d28-3ac2-44a2-ae34-bd956070dab1"
+	//ExinCore = "61103d28-3ac2-44a2-ae34-bd956070dab1"
+	ExinCore = "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909"
 )
 
 type ExinOrder struct {
@@ -42,9 +43,9 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 	if len(trace) == 1 {
 		traceId = trace[0]
 	}
-	order := ExinOrder{
-		A: uuid.Must(uuid.FromString(get)),
-	}
+	// order := ExinOrder{
+	// 	A: uuid.Must(uuid.FromString(get)),
+	// }
 
 	precision := ExinAssetPrecision(send, get)
 	a := number.FromString(amount).Round(precision)
@@ -55,7 +56,8 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 		RecipientId: ExinCore,
 		Amount:      a,
 		TraceId:     traceId,
-		Memo:        order.Pack(),
+		//Memo:        order.Pack(),
+		Memo: Who(get),
 	}
 	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
