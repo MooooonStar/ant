@@ -115,11 +115,11 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 				}
 			}
 		}(exchangeOrder)
-		template := `Action:  %8s,
-					Pair:     %8s,
-					Price:    %10.8s,
-					Amount:   %8s,
-					Profit:   %8v%`
+		template := `Action:           %8s,
+Pair:          %8s,
+Price:       %10.8s,
+Amount:      %8s,
+Profit:           %8s%%`
 		msg := fmt.Sprintf(template, e.Category, Who(e.Base)+"/"+Who(e.Quote), e.Price.String(),
 			e.Amount.String(), e.Profit.Mul(decimal.NewFromFloat(100.0)).Round(2).String())
 
