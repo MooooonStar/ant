@@ -31,15 +31,15 @@ type ProfitEvent struct {
 	Price         decimal.Decimal `json:"price"`
 	Profit        decimal.Decimal `json:"profit"`
 	Amount        decimal.Decimal `json:"amount"`
-	Min           decimal.Decimal `json:"min"`
-	Max           decimal.Decimal `json:"max"`
+	Min           decimal.Decimal `json:"-"`
+	Max           decimal.Decimal `json:"-"`
 	Base          string          `json:"base"`
 	Quote         string          `json:"quote"`
-	CreatedAt     time.Time       `json:"created_at"`
-	Expire        int64           `json:"expire"`
-	BaseAmount    decimal.Decimal `json:"base_amount"`
-	QuoteAmount   decimal.Decimal `json:"quote_amount"`
-	ExchangeOrder string          `json:"exchange_order"`
+	CreatedAt     time.Time       `json:"-"`
+	Expire        int64           `json:"-"`
+	BaseAmount    decimal.Decimal `json:"-"`
+	QuoteAmount   decimal.Decimal `json:"-"`
+	ExchangeOrder string          `json:"-"`
 }
 
 type Ant struct {
@@ -90,7 +90,7 @@ func (ant *Ant) OnMessage(base, quote string) *OrderBook {
 }
 
 func (ant *Ant) Listen(ctx context.Context) error {
-	return ant.client.Loop(ctx, Handler{})
+	return ant.client.Loop(ctx, &Handler{ant.client})
 }
 
 func (ant *Ant) Clean() {
@@ -112,11 +112,6 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		return nil
 	}
 
-	if !ant.enableOcean {
-		ant.orders[exchangeOrder] = true
-		return nil
-	}
-
 	defer func() {
 		go func(trace string) {
 			select {
@@ -126,7 +121,18 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 				}
 			}
 		}(exchangeOrder)
+		e.Base = Who(e.Base)
+		e.Quote = Who(e.Quote)
+		bt, err := json.Marshal(e)
+		if err == nil {
+			ant.Notice(context.TODO(), string(bt), 37194514)
+		}
 	}()
+
+	if !ant.enableOcean {
+		ant.orders[exchangeOrder] = true
+		return nil
+	}
 
 	amount := e.Amount
 	ant.assetsLock.Lock()
@@ -270,10 +276,6 @@ func (ant *Ant) Trade(ctx context.Context) error {
 		case e := <-ant.event:
 			if err := ant.trade(e); err != nil {
 				log.Error(err)
-			}
-			bt, err := json.Marshal(e)
-			if err == nil {
-				ant.Notice(ctx, string(bt), 37194514)
 			}
 		}
 	}

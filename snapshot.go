@@ -99,11 +99,6 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
-	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
-		log.Error(err)
-		return err
-	}
-
 	if err := ex.HandleSnapshot(ctx, s); err != nil {
 		log.Error(err)
 		return err
