@@ -121,6 +121,7 @@ func main() {
 				subctx, cancel := context.WithCancel(ctx)
 				go ant.PollMixinNetwork(subctx)
 				go ant.UpdateBalance(subctx)
+				go ant.Listen(subctx)
 				for _, baseSymbol := range baseSymbols {
 					for _, quoteSymbol := range quoteSymbols {
 						base := GetAssetId(strings.ToUpper(baseSymbol))

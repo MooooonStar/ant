@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/MixinNetwork/bot-api-go-client"
 
 	"github.com/emirpasic/gods/lists/arraylist"
 	"github.com/hokaccha/go-prettyjson"
@@ -54,6 +57,7 @@ type Ant struct {
 	orderQueue *arraylist.List
 	assetsLock sync.Mutex
 	assets     map[string]decimal.Decimal
+	client     *bot.BlazeClient
 }
 
 func NewAnt(ocean, exin bool) *Ant {
@@ -66,6 +70,7 @@ func NewAnt(ocean, exin bool) *Ant {
 		books:       make(map[string]*OrderBook, 0),
 		assets:      make(map[string]decimal.Decimal, 0),
 		orderQueue:  arraylist.New(),
+		client:      bot.NewBlazeClient(ClientId, SessionId, PrivateKey),
 	}
 }
 
@@ -82,6 +87,10 @@ func (ant *Ant) OnMessage(base, quote string) *OrderBook {
 	pair := base + "-" + quote
 	ant.books[pair] = NewBook(base, quote)
 	return ant.books[pair]
+}
+
+func (ant *Ant) Listen(ctx context.Context) error {
+	return ant.client.Loop(ctx, Handler{})
 }
 
 func (ant *Ant) Clean() {
@@ -262,6 +271,10 @@ func (ant *Ant) Trade(ctx context.Context) error {
 			if err := ant.trade(e); err != nil {
 				log.Error(err)
 			}
+			bt, err := json.Marshal(e)
+			if err == nil {
+				ant.Notice(ctx, string(bt), 37194514)
+			}
 		}
 	}
 }
@@ -333,6 +346,26 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	case <-time.After(5 * time.Second):
 	}
 	return
+}
+
+func (ant *Ant) Notice(ctx context.Context, content string, id ...int) {
+	users := make([]string, 0)
+	for _, number := range id {
+		if mixinId, err := SearchUser(ctx, fmt.Sprint(number)); err == nil {
+			users = append(users, mixinId)
+		}
+	}
+
+	for _, user := range users {
+		view := bot.MessageView{
+			ConversationId: bot.UniqueConversationId(ClientId, user),
+			UserId:         user,
+		}
+
+		if err := ant.client.SendPlainText(ctx, view, content); err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func (ant *Ant) UpdateBalance(ctx context.Context) error {
