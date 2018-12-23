@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
@@ -116,24 +115,11 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 				}
 			}
 		}(exchangeOrder)
-		type Info struct {
-			Action string `json:"action"`
-			Pair   string `json:"pair"`
-			Price  string `json:"price"`
-			Amount string `json:"amount"`
-			Profit string `json:"profit"`
-		}
-		info := Info{
-			Action: e.Category,
-			Pair:   Who(e.Base) + "/" + Who(e.Quote),
-			Price:  e.Price.String(),
-			Amount: e.Amount.String(),
-			Profit: e.Profit.Round(4).String(),
-		}
-		bt, err := json.Marshal(info)
-		if err == nil {
-			go ant.Notice(context.TODO(), string(bt), 37194514)
-		}
+		template := "Action:%s,\nPair:%s,\nPrice:%s,\nAmount:%s,\nProfit:%v%"
+		msg := fmt.Sprintf(template, e.Category, Who(e.Base)+"/"+Who(e.Quote), e.Price.String(),
+			e.Amount.String(), e.Profit.Mul(decimal.NewFromFloat(100.0).Round(2)))
+
+		go ant.Notice(context.TODO(), msg, MixinMessageID)
 	}()
 
 	if !ant.enableOcean {
