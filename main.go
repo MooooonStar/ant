@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"github.com/hokaccha/go-prettyjson"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -46,17 +44,19 @@ func main() {
 			Usage: "trade in exin",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "amount"},
-				cli.StringFlag{Name: "send"},
-				cli.StringFlag{Name: "get"},
+				cli.StringFlag{Name: "side"},
+				cli.StringFlag{Name: "base"},
+				cli.StringFlag{Name: "quote"},
 			},
 			Action: func(c *cli.Context) error {
 				amount := c.String("amount")
-				send := strings.ToUpper(c.String("send"))
-				get := strings.ToUpper(c.String("get"))
-				if len(amount) == 0 || len(send) == 0 || len(get) == 0 {
+				side := c.String("side")
+				base := strings.ToUpper(c.String("base"))
+				quote := strings.ToUpper(c.String("quote"))
+				if len(amount) == 0 || len(base) == 0 || len(quote) == 0 || len(side) == 0 {
 					return fmt.Errorf("invalid params")
 				}
-				_, err := ExinTrade(amount, GetAssetId(send), GetAssetId(get))
+				_, err := ExinTrade(side, amount, GetAssetId(base), GetAssetId(quote))
 				return err
 			},
 		},
@@ -116,14 +116,6 @@ func main() {
 				}
 
 				ctx := context.Background()
-				db, err := gorm.Open("mysql", "root:@/snow?parseTime=true")
-				if err != nil {
-					panic(err)
-				}
-				ctx = SetDB(ctx, db)
-				db.AutoMigrate(&Snapshot{})
-				db.AutoMigrate(&Wallet{})
-
 				// ant demo
 				ant := NewAnt(ocean, exin)
 				subctx, cancel := context.WithCancel(ctx)
@@ -151,9 +143,6 @@ func main() {
 				case <-sig:
 					cancel()
 					ant.Clean()
-					if err := SaveProperty(subctx, db); err != nil {
-						log.Error(err)
-					}
 					return nil
 				}
 			},

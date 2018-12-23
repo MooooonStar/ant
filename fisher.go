@@ -18,7 +18,6 @@ type Trade struct {
 	CreateAt string `json:"created_at"`
 }
 
-//Exin上价格在变动，导致钓鱼单的价格也会变化，造成ocean.one上一笔成交生成多笔钓鱼单，待优化
 func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 	orders := make(map[string]bool, 0)
 	ticker := time.NewTicker(1 * time.Second)

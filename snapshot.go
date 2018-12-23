@@ -32,7 +32,7 @@ type Snapshot struct {
 }
 
 func (Snapshot) TableName() string {
-	return "why_snapshots"
+	return "bot_snapshots"
 }
 
 func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, limit int) ([]*Snapshot, error) {

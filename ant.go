@@ -8,9 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
-
 	"github.com/emirpasic/gods/lists/arraylist"
+	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -182,17 +181,14 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Before(time.Now()) {
 					expired = append(expired, it.Index())
 					amount := event.BaseAmount
-					send, get := event.Base, event.Quote
+					send, side := event.Base, PageSideAsk
 					if !amount.IsPositive() {
 						amount = event.QuoteAmount
-						send, get = event.Quote, event.Base
+						send, side = event.Quote, PageSideBid
 						if !amount.IsPositive() {
 							continue
 						}
 					}
-
-					v, _ := prettyjson.Marshal(event)
-					log.Info("event", string(v))
 
 					ant.assetsLock.Lock()
 					balance := ant.assets[send]
@@ -205,7 +201,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					if !limited.IsPositive() {
 						log.Errorf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
 					} else {
-						if _, err := ExinTrade(limited.String(), send, get); err != nil {
+						if _, err := ExinTrade(side, limited.String(), event.Base, event.Quote); err != nil {
 							log.Error(err)
 							continue
 						}

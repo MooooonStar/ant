@@ -38,14 +38,18 @@ func (order *ExinOrder) Unpack(memo string) error {
 	return msgpack.Unmarshal(parsedpack, order)
 }
 
-func ExinTrade(amount, send, get string, trace ...string) (string, error) {
+func ExinTrade(side, amount, base, quote string, trace ...string) (string, error) {
 	traceId := uuid.Must(uuid.NewV4()).String()
 	if len(trace) == 1 {
 		traceId = trace[0]
 	}
-	// order := ExinOrder{
-	// 	A: uuid.Must(uuid.FromString(get)),
-	// }
+	send, get := base, quote
+	if side == PageSideBid {
+		send, get = quote, base
+	}
+	order := ExinOrder{
+		A: uuid.Must(uuid.FromString(get)),
+	}
 
 	precision := ExinAssetPrecision(send, get)
 	a := number.FromString(amount).Round(precision)
@@ -56,15 +60,17 @@ func ExinTrade(amount, send, get string, trace ...string) (string, error) {
 		RecipientId: ExinCore,
 		Amount:      a,
 		TraceId:     traceId,
-		//Memo:        order.Pack(),
-		Memo: Who(get),
+		Memo:        order.Pack(),
 	}
 	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
-func ExinTradeMessager(side, amount, base, quote string) (string, error) {
+func ExinTradeMessager(side, amount, base, quote string, trace ...string) (string, error) {
 	memo := fmt.Sprintf("ExinOne %s/%s %s", Who(base), Who(quote), side)
-	trace := uuid.Must(uuid.NewV4()).String()
+	traceId := uuid.Must(uuid.NewV4()).String()
+	if len(trace) == 1 {
+		traceId = trace[0]
+	}
 	send, get := base, quote
 	if side == "buy" {
 		send, get = quote, base
@@ -76,10 +82,10 @@ func ExinTradeMessager(side, amount, base, quote string) (string, error) {
 		AssetId:     send,
 		RecipientId: ExinCore,
 		Amount:      a,
-		TraceId:     trace,
+		TraceId:     traceId,
 		Memo:        memo,
 	}
-	return trace, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
 func ExinAssetPrecision(send, get string) int32 {
