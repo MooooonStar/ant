@@ -31,15 +31,15 @@ type ProfitEvent struct {
 	Price         decimal.Decimal `json:"price"`
 	Profit        decimal.Decimal `json:"profit"`
 	Amount        decimal.Decimal `json:"amount"`
-	Min           decimal.Decimal `json:"-"`
-	Max           decimal.Decimal `json:"-"`
+	Min           decimal.Decimal `json:"min"`
+	Max           decimal.Decimal `json:"max"`
 	Base          string          `json:"base"`
 	Quote         string          `json:"quote"`
-	CreatedAt     time.Time       `json:"-"`
-	Expire        int64           `json:"-"`
-	BaseAmount    decimal.Decimal `json:"-"`
-	QuoteAmount   decimal.Decimal `json:"-"`
-	ExchangeOrder string          `json:"-"`
+	CreatedAt     time.Time       `json:"created_at"`
+	Expire        int64           `json:"expire"`
+	BaseAmount    decimal.Decimal `json:"base_amount"`
+	QuoteAmount   decimal.Decimal `json:"quote_amount"`
+	ExchangeOrder string          `json:"exchange_order"`
 }
 
 type Ant struct {
@@ -121,9 +121,21 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 				}
 			}
 		}(exchangeOrder)
-		e.Base = Who(e.Base)
-		e.Quote = Who(e.Quote)
-		bt, err := json.Marshal(e)
+		type Info struct {
+			Action string `json:"action"`
+			Pair   string `json:"pair"`
+			Price  string `json:"price"`
+			Amount string `json:"amount"`
+			Profit string `json:"profit"`
+		}
+		info := Info{
+			Action: e.Category,
+			Pair:   Who(e.Base) + "/" + Who(e.Quote),
+			Price:  e.Price.String(),
+			Amount: e.Amount.String(),
+			Profit: e.Profit.Round(4).String(),
+		}
+		bt, err := json.Marshal(info)
 		if err == nil {
 			ant.Notice(context.TODO(), string(bt), 37194514)
 		}
