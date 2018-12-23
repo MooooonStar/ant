@@ -40,46 +40,6 @@ func main() {
 			},
 		},
 		{
-			Name:  "trade",
-			Usage: "trade in exin",
-			Flags: []cli.Flag{
-				cli.StringFlag{Name: "amount"},
-				cli.StringFlag{Name: "side"},
-				cli.StringFlag{Name: "base"},
-				cli.StringFlag{Name: "quote"},
-			},
-			Action: func(c *cli.Context) error {
-				amount := c.String("amount")
-				side := c.String("side")
-				base := strings.ToUpper(c.String("base"))
-				quote := strings.ToUpper(c.String("quote"))
-				if len(amount) == 0 || len(base) == 0 || len(quote) == 0 || len(side) == 0 {
-					return fmt.Errorf("invalid params")
-				}
-				_, err := ExinTrade(side, amount, GetAssetId(base), GetAssetId(quote))
-				return err
-			},
-		},
-		{
-			Name:  "cancel",
-			Usage: "cancel order in ocean.one by snapshot or trace",
-			Flags: []cli.Flag{
-				cli.StringFlag{Name: "snapshot,s"},
-				cli.StringFlag{Name: "trace,t"},
-			},
-			Action: func(c *cli.Context) error {
-				if trace := c.String("trace"); len(trace) > 0 {
-					return OceanCancel(trace)
-				}
-				snapshot := c.String("snapshot")
-				trace, err := ReadSnapshot(context.TODO(), snapshot)
-				if err != nil {
-					return err
-				}
-				return OceanCancel(trace)
-			},
-		},
-		{
 			Name:  "run",
 			Usage: "find profits between different exchanges",
 			Flags: []cli.Flag{
@@ -115,13 +75,11 @@ func main() {
 					quoteSymbols = []string{quoteSymbol}
 				}
 
-				ctx := context.Background()
-				// ant demo
+				ctx, cancel := context.WithCancel(context.Background())
 				ant := NewAnt(ocean, exin)
-				subctx, cancel := context.WithCancel(ctx)
-				go ant.PollMixinNetwork(subctx)
-				go ant.UpdateBalance(subctx)
-				go ant.Listen(subctx)
+				go ant.PollMixinNetwork(ctx)
+				go ant.PollMixinMessage(ctx)
+				go ant.UpdateBalance(ctx)
 				for _, baseSymbol := range baseSymbols {
 					for _, quoteSymbol := range quoteSymbols {
 						base := GetAssetId(strings.ToUpper(baseSymbol))
@@ -130,14 +88,14 @@ func main() {
 							continue
 						}
 
-						client := NewClient(subctx, base, quote, ant.OnMessage(base, quote))
-						go client.ReceiveMessage(subctx)
+						client := NewClient(ctx, base, quote, ant.OnMessage(base, quote))
+						go client.PollOceanMessage(ctx)
 
-						go ant.Watching(subctx, base, quote)
-						go ant.Fishing(subctx, base, quote)
+						go ant.Watching(ctx, base, quote)
+						go ant.Fishing(ctx, base, quote)
 					}
 				}
-				go ant.Trade(subctx)
+				go ant.Trade(ctx)
 
 				//ctrl-c 退出时先取消订单
 				select {

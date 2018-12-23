@@ -89,7 +89,7 @@ func (ant *Ant) OnMessage(base, quote string) *OrderBook {
 	return ant.books[pair]
 }
 
-func (ant *Ant) Listen(ctx context.Context) {
+func (ant *Ant) PollMixinMessage(ctx context.Context) {
 	for {
 		if err := ant.client.Loop(ctx, &Handler{ant.client}); err != nil {
 			log.Println(err)
