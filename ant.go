@@ -315,7 +315,7 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	}
 	log.Info(msg)
 
-	id := UuidWithString(exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
+	id := UuidWithString(ClientId + exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
 	event := ProfitEvent{
 		ID:       id,
 		Category: category,
