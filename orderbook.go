@@ -98,7 +98,7 @@ func NewComparer(side string) func(a, b interface{}) int {
 	}
 }
 
-func (book *OrderBook) OnMessage(msg *BlazeMessage) error {
+func (book *OrderBook) OnBlaseMessage(msg *BlazeMessage) error {
 	bt, err := json.Marshal(msg.Data)
 	if err != nil {
 		return err

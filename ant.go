@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/MixinNetwork/bot-api-go-client"
-
 	"github.com/emirpasic/gods/lists/arraylist"
 	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
@@ -83,19 +82,10 @@ func UuidWithString(str string) string {
 	return uuid.FromBytesOrNil(sum).String()
 }
 
-func (ant *Ant) OnMessage(base, quote string) *OrderBook {
+func (ant *Ant) OnBlaseMessage(base, quote string) *OrderBook {
 	pair := base + "-" + quote
 	ant.books[pair] = NewBook(base, quote)
 	return ant.books[pair]
-}
-
-func (ant *Ant) PollMixinMessage(ctx context.Context) {
-	for {
-		if err := ant.client.Loop(ctx, &Handler{ant.client}); err != nil {
-			log.Println(err)
-			time.Sleep(1 * time.Second)
-		}
-	}
 }
 
 func (ant *Ant) Clean() {
@@ -365,26 +355,6 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	case <-time.After(5 * time.Second):
 	}
 	return
-}
-
-func (ant *Ant) Notice(ctx context.Context, content string, id ...int) {
-	users := make([]string, 0)
-	for _, number := range id {
-		if mixinId, err := SearchUser(ctx, fmt.Sprint(number)); err == nil {
-			users = append(users, mixinId)
-		}
-	}
-
-	for _, user := range users {
-		view := bot.MessageView{
-			ConversationId: bot.UniqueConversationId(ClientId, user),
-			UserId:         user,
-		}
-
-		if err := ant.client.SendPlainText(ctx, view, content); err != nil {
-			log.Println(err)
-		}
-	}
 }
 
 func (ant *Ant) UpdateBalance(ctx context.Context) error {

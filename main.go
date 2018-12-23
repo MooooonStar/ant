@@ -88,7 +88,7 @@ func main() {
 							continue
 						}
 
-						client := NewClient(ctx, base, quote, ant.OnMessage(base, quote))
+						client := NewClient(ctx, base, quote, ant.OnBlaseMessage(base, quote))
 						go client.PollOceanMessage(ctx)
 
 						go ant.Watching(ctx, base, quote)

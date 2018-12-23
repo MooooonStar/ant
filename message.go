@@ -32,7 +32,7 @@ type BlazeMessage struct {
 }
 
 type MessageHandler interface {
-	OnMessage(*BlazeMessage) error
+	OnBlaseMessage(*BlazeMessage) error
 }
 
 type Client struct {
@@ -79,7 +79,7 @@ func (client *Client) process(ctx context.Context) error {
 	for {
 		select {
 		case msg := <-client.receive:
-			if err := client.handler.OnMessage(msg); err != nil {
+			if err := client.handler.OnBlaseMessage(msg); err != nil {
 				if strings.Contains(err.Error(), WrongSequenceError) {
 					return err
 				}

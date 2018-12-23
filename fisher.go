@@ -73,35 +73,3 @@ func (ant *Ant) GetOceanTrade(ctx context.Context, base, quote string) Trade {
 	pair := base + "-" + quote
 	return ant.books[pair].trade
 }
-
-// 更新周期太长(30s)，换成websocket
-// func GetOceanTrades(ctx context.Context, base, quote string) ([]Trade, error) {
-// 	url := "https://events.ocean.one/markets/" + base + "-" + quote + "/trades"
-// 	offset := time.Now().Add(-5 * time.Minute).UTC().Format(time.RFC3339Nano)
-// 	query := fmt.Sprintf("?limit=%d&offset=%s&order=DESC", 10, offset)
-// 	client := http.Client{
-// 		Timeout: 10 * time.Second,
-// 	}
-
-// 	req, err := http.NewRequest("GET", url+query, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	bt, err := ioutil.ReadAll(resp.Body)
-// 	defer resp.Body.Close()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	var data struct {
-// 		Trades []Trade `json:"data"`
-// 	}
-// 	err = json.Unmarshal(bt, &data)
-// 	return data.Trades, err
-// }
