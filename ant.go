@@ -89,8 +89,13 @@ func (ant *Ant) OnMessage(base, quote string) *OrderBook {
 	return ant.books[pair]
 }
 
-func (ant *Ant) Listen(ctx context.Context) error {
-	return ant.client.Loop(ctx, &Handler{ant.client})
+func (ant *Ant) Listen(ctx context.Context) {
+	for {
+		if err := ant.client.Loop(ctx, &Handler{ant.client}); err != nil {
+			log.Println(err)
+			time.Sleep(1 * time.Second)
+		}
+	}
 }
 
 func (ant *Ant) Clean() {
@@ -137,7 +142,7 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 		}
 		bt, err := json.Marshal(info)
 		if err == nil {
-			ant.Notice(context.TODO(), string(bt), 37194514)
+			go ant.Notice(context.TODO(), string(bt), 37194514)
 		}
 	}()
 
