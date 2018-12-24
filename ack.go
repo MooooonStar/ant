@@ -9,36 +9,64 @@ import (
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	OceanWebsite = "https://mixcoin.one"
+	ExinWebsite  = "https://exinone.com/#/exchange/flash"
 )
 
 func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId string) error {
 	if msgView.Category == bot.MessageCategoryPlainText && msgView.ConversationId == bot.UniqueConversationId(ClientId, msgView.UserId) {
-		if data, err := base64.StdEncoding.DecodeString(msgView.Data); err != nil {
-			return err
-		} else if string(data) != "show" {
-			return nil
-		}
-		assets, err := ReadAssets(ctx)
+		data, err := base64.StdEncoding.DecodeString(msgView.Data)
 		if err != nil {
 			return err
 		}
-		out := make(map[string]string, 0)
-		for asset, balance := range assets {
-			if amount, _ := strconv.ParseFloat(balance, 64); amount > 0.0 {
-				out[Who(asset)] = balance
+		switch string(data) {
+		case "whoisyourdaddy":
+			assets, err := ReadAssets(ctx)
+			if err != nil {
+				return err
+			}
+			out := make(map[string]string, 0)
+			for asset, balance := range assets {
+				if amount, _ := strconv.ParseFloat(balance, 64); amount > 0.0 {
+					out[Who(asset)] = balance
+				}
+			}
+			bt, err := json.Marshal(out)
+			if err != nil {
+				return err
+			}
+			ant.client.SendPlainText(ctx, msgView, string(bt))
+		case "sub":
+			pay := Payment{
+				Recipient: ClientId,
+				Asset:     CNB,
+				Amount:    "666",
+				Memo:      "I am in",
+			}
+
+			if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, string(data), pay.Url(), "#ABABAB"); err != nil {
+				log.Println("Sub error", err)
+			}
+		case "trade":
+			if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, "ocean", OceanWebsite, "#2e8b57"); err != nil {
+				log.Panicln("Trade error", err)
+			}
+
+			if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, "exin", ExinWebsite, "#ffdead"); err != nil {
+				log.Panicln("Trade error", err)
 			}
 		}
-		bt, err := json.Marshal(out)
-		if err != nil {
-			return err
-		}
-		ant.client.SendPlainText(ctx, msgView, string(bt))
+
 	}
 	return nil
 }
 
-func (ant *Ant) Notice(ctx context.Context, content string, id ...int) {
+func (ant *Ant) Notice(ctx context.Context, event ProfitEvent, id ...int) {
 	users := make([]string, 0)
 	for _, number := range id {
 		if mixinId, err := SearchUser(ctx, fmt.Sprint(number)); err == nil {
@@ -46,14 +74,31 @@ func (ant *Ant) Notice(ctx context.Context, content string, id ...int) {
 		}
 	}
 
+	template := `Action:           %8s,
+	Pair:          %8s,
+	Price:       %10.8s,
+	Amount:      %8s,
+	Profit:           %8s%%`
+
+	msg := fmt.Sprintf(template, event.Category, Who(event.Base)+"/"+Who(event.Quote), event.Price.String(),
+		event.Amount.String(), event.Profit.Mul(decimal.NewFromFloat(100.0)).Round(2).String())
+
 	for _, user := range users {
-		view := bot.MessageView{
+		msgView := bot.MessageView{
 			ConversationId: bot.UniqueConversationId(ClientId, user),
 			UserId:         user,
 		}
 
-		if err := ant.client.SendPlainText(ctx, view, content); err != nil {
-			log.Println(err)
+		if err := ant.client.SendPlainText(ctx, msgView, msg); err != nil {
+			log.Println("Send message error", err)
+		}
+
+		if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, "ocean", OceanWebsite, "#2e8b57"); err != nil {
+			log.Panicln("Trade error", err)
+		}
+
+		if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, "exin", ExinWebsite, "#ffdead"); err != nil {
+			log.Panicln("Trade error", err)
 		}
 	}
 }
