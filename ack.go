@@ -15,7 +15,7 @@ import (
 
 const (
 	OceanWebsite = "https://mixcoin.one"
-	ExinWebsite  = "https://exinone.com/#/exchange/flash"
+	ExinWebsite  = "https://exinone.com/#/exchange/flash/flashTakeOrder?uuid=17"
 )
 
 func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId string) error {
@@ -53,11 +53,17 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				log.Println("Sub error", err)
 			}
 		case "trade":
-			if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, "ocean", OceanWebsite, "#2e8b57"); err != nil {
-				log.Panicln("Trade error", err)
+			ocean := bot.Button{
+				Label:  "ocean",
+				Action: OceanWebsite,
+				Color:  "#2e8b57",
 			}
-
-			if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, "exin", ExinWebsite, "#ffdead"); err != nil {
+			exin := bot.Button{
+				Label:  "exin",
+				Action: ExinWebsite,
+				Color:  "#ffdead",
+			}
+			if err := ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin); err != nil {
 				log.Panicln("Trade error", err)
 			}
 		}
@@ -93,11 +99,18 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent, id ...int) {
 			log.Println("Send message error", err)
 		}
 
-		if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, "ocean", OceanWebsite, "#2e8b57"); err != nil {
-			log.Panicln("Trade error", err)
+		ocean := bot.Button{
+			Label:  "ocean",
+			Action: OceanWebsite,
+			Color:  "#2e8b57",
+		}
+		exin := bot.Button{
+			Label:  "exin",
+			Action: ExinWebsite,
+			Color:  "#ffdead",
 		}
 
-		if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, "exin", ExinWebsite, "#ffdead"); err != nil {
+		if err := ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin); err != nil {
 			log.Panicln("Trade error", err)
 		}
 	}
