@@ -42,29 +42,15 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			}
 			ant.client.SendPlainText(ctx, msgView, string(bt))
 		case "sub":
-			pay := Payment{
-				Recipient: ClientId,
-				Asset:     CNB,
-				Amount:    "666",
-				Memo:      "I am in",
-			}
-
-			if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, string(data), pay.Url(), "#ABABAB"); err != nil {
+			pay := Payment{Recipient: ClientId, Asset: CNB, Amount: "666", Memo: "I am in"}
+			if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, string(data), pay.Url(), "#ba55d3"); err != nil {
 				log.Println("Sub error", err)
 			}
 		case "trade":
-			ocean := bot.Button{
-				Label:  "ocean",
-				Action: OceanWebsite,
-				Color:  "#2e8b57",
-			}
-			exin := bot.Button{
-				Label:  "exin",
-				Action: ExinWebsite,
-				Color:  "#ffdead",
-			}
+			ocean := bot.Button{Label: "ocean", Action: OceanWebsite, Color: "#2e8b57"}
+			exin := bot.Button{Label: "exin", Action: ExinWebsite, Color: "#bc8f8f"}
 			if err := ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin); err != nil {
-				log.Panicln("Trade error", err)
+				log.Println("Trade error", err)
 			}
 		}
 
@@ -80,12 +66,9 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent, id ...int) {
 		}
 	}
 
-	template := `Action:           %8s,
-	Pair:          %8s,
-	Price:       %10.8s,
-	Amount:      %8s,
-	Profit:           %8s%%`
-
+	template := `Action:           %8s,Pair:          %8s,Price:       %10.8s,Amount:      %8s,Profit:           %8s%%`
+	ocean := bot.Button{Label: "ocean", Action: OceanWebsite, Color: "#2e8b57"}
+	exin := bot.Button{Label: "exin", Action: ExinWebsite, Color: "#bc8f8f"}
 	msg := fmt.Sprintf(template, event.Category, Who(event.Base)+"/"+Who(event.Quote), event.Price.String(),
 		event.Amount.String(), event.Profit.Mul(decimal.NewFromFloat(100.0)).Round(2).String())
 
@@ -99,19 +82,8 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent, id ...int) {
 			log.Println("Send message error", err)
 		}
 
-		ocean := bot.Button{
-			Label:  "ocean",
-			Action: OceanWebsite,
-			Color:  "#2e8b57",
-		}
-		exin := bot.Button{
-			Label:  "exin",
-			Action: ExinWebsite,
-			Color:  "#ffdead",
-		}
-
 		if err := ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin); err != nil {
-			log.Panicln("Trade error", err)
+			log.Println("Trade error", err)
 		}
 	}
 }
