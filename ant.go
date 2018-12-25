@@ -19,7 +19,7 @@ import (
 const (
 	ProfitThreshold = 0.010 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee        = 0.001
-	ExinFee         = 0.000
+	ExinFee         = 0.003
 	OrderExpireTime = int64(5 * time.Second)
 )
 
