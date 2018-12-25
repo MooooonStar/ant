@@ -92,8 +92,8 @@ func (ant *Ant) PollMixinMessage(ctx context.Context) {
 	for {
 		if err := ant.client.Loop(ctx, ant); err != nil {
 			log.Println(err)
-			time.Sleep(1 * time.Second)
 		}
+		time.Sleep(1 * time.Second)
 	}
 }
 

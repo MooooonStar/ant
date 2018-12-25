@@ -100,7 +100,7 @@ func (ant *Ant) Clean() {
 	}
 }
 
-func (ant *Ant) trade(e *ProfitEvent) error {
+func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 	exchangeOrder := UuidWithString(e.ID + OceanCore)
 	if _, ok := ant.orders[exchangeOrder]; ok {
 		return nil
@@ -116,7 +116,7 @@ func (ant *Ant) trade(e *ProfitEvent) error {
 			}
 		}(exchangeOrder)
 
-		go ant.Notice(context.TODO(), *e, MixinMessageID)
+		go ant.Notice(ctx, *e, MixinMessageID)
 	}()
 
 	if !ant.enableOcean {
@@ -264,7 +264,7 @@ func (ant *Ant) Trade(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case e := <-ant.event:
-			if err := ant.trade(e); err != nil {
+			if err := ant.trade(ctx, e); err != nil {
 				log.Error(err)
 			}
 		}

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hokaccha/go-prettyjson"
+
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	log "github.com/sirupsen/logrus"
 )
@@ -99,9 +101,17 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
+	v, _ := prettyjson.Marshal(s)
+	log.Println("find snapshot", string(v))
+
 	if err := ex.HandleSnapshot(ctx, s); err != nil {
 		log.Error(err)
 		return err
 	}
+
+	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
+		return err
+	}
+
 	return nil
 }

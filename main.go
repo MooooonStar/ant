@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -75,7 +77,13 @@ func main() {
 					quoteSymbols = []string{quoteSymbol}
 				}
 
+				db, err := gorm.Open("mysql", "root:@/snow")
+				if err != nil {
+					panic(err)
+				}
+
 				ctx, cancel := context.WithCancel(context.Background())
+				ctx = SetDB(ctx, db)
 				ant := NewAnt(ocean, exin)
 				go ant.PollMixinNetwork(ctx)
 				go ant.PollMixinMessage(ctx)
