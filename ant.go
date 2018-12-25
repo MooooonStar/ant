@@ -116,7 +116,7 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 			}
 		}(exchangeOrder)
 
-		go ant.Notice(ctx, *e, MixinMessageID)
+		go ant.Notice(ctx, *e)
 	}()
 
 	if !ant.enableOcean {

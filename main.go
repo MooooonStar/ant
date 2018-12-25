@@ -7,7 +7,9 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -82,8 +84,19 @@ func main() {
 					panic(err)
 				}
 
+				redisClient := redis.NewClient(&redis.Options{
+					Addr:         "127.0.0.1:6379",
+					ReadTimeout:  3 * time.Second,
+					WriteTimeout: 3 * time.Second,
+					PoolTimeout:  4 * time.Second,
+					IdleTimeout:  60 * time.Second,
+					PoolSize:     1024,
+				})
+
 				ctx, cancel := context.WithCancel(context.Background())
 				ctx = SetDB(ctx, db)
+				ctx = SetupRedis(ctx, redisClient)
+
 				ant := NewAnt(ocean, exin)
 				go ant.PollMixinNetwork(ctx)
 				go ant.PollMixinMessage(ctx)

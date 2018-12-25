@@ -14,9 +14,22 @@ import (
 )
 
 const (
-	OceanWebsite = "https://mixcoin.one"
-	ExinWebsite  = "https://exinone.com/#/exchange/flash/flashTakeOrder?uuid=17"
+	SubcribedUser = "subcriberd_user"
+	OceanWebsite  = "https://mixcoin.one"
+	ExinWebsite   = "https://exinone.com/#/exchange/flash/flashTakeOrder?uuid=%d"
 )
+
+var PairIndex = map[string]int{
+	"BTC/USDT": 15,
+	"ETH/USDT": 17,
+	"BCH/USDT": 16,
+	"EOS/USDT": 18,
+	"ETH/BTC":  19,
+	"BCH/BTC":  21,
+	"EOS/BTC":  20,
+	"XIN/BTC":  4,
+	"EOS/ETH":  22,
+}
 
 func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId string) error {
 	if msgView.Category == bot.MessageCategoryPlainText && msgView.ConversationId == bot.UniqueConversationId(ClientId, msgView.UserId) {
@@ -42,13 +55,13 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			}
 			ant.client.SendPlainText(ctx, msgView, string(bt))
 		case "sub":
-			pay := Payment{Recipient: ClientId, Asset: CNB, Amount: "666", Memo: "I am in"}
-			if err := ant.client.SendAppButton(ctx, msgView.ConversationId, msgView.UserId, string(data), pay.Url(), "#ba55d3"); err != nil {
-				log.Println("Sub error", err)
+			if _, err := Redis(ctx).SAdd(SubcribedUser, msgView.UserId).Result(); err != nil {
+				log.Println("Add user err", err)
 			}
+			ant.client.SendPlainText(ctx, msgView, "thanks for your attention")
 		case "trade":
 			ocean := bot.Button{Label: "ocean", Action: OceanWebsite, Color: "#2e8b57"}
-			exin := bot.Button{Label: "exin", Action: ExinWebsite, Color: "#bc8f8f"}
+			exin := bot.Button{Label: "exin", Action: fmt.Sprintf(ExinWebsite, 15), Color: "#bc8f8f"}
 			if err := ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin); err != nil {
 				log.Println("Trade error", err)
 			}
@@ -58,12 +71,10 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 	return nil
 }
 
-func (ant *Ant) Notice(ctx context.Context, event ProfitEvent, id ...int) {
-	users := make([]string, 0)
-	for _, number := range id {
-		if mixinId, err := SearchUser(ctx, fmt.Sprint(number)); err == nil {
-			users = append(users, mixinId)
-		}
+func (ant *Ant) Notice(ctx context.Context, event ProfitEvent) error {
+	users, err := Redis(ctx).SMembers(SubcribedUser).Result()
+	if err != nil {
+		return err
 	}
 
 	template := `Action:           %8s,
@@ -71,9 +82,10 @@ Pair:          %8s,
 Price:       %10.8s,
 Amount:      %8s,
 Profit:           %8s%%`
+	pair := Who(event.Base) + "/" + Who(event.Quote)
 	ocean := bot.Button{Label: "ocean", Action: OceanWebsite, Color: "#2e8b57"}
-	exin := bot.Button{Label: "exin", Action: ExinWebsite, Color: "#bc8f8f"}
-	msg := fmt.Sprintf(template, event.Category, Who(event.Base)+"/"+Who(event.Quote), event.Price.String(),
+	exin := bot.Button{Label: "exin", Action: fmt.Sprintf(ExinWebsite, PairIndex[pair]), Color: "#bc8f8f"}
+	msg := fmt.Sprintf(template, event.Category, pair, event.Price.String(),
 		event.Amount.String(), event.Profit.Mul(decimal.NewFromFloat(100.0)).Round(2).String())
 
 	for _, user := range users {
@@ -90,6 +102,7 @@ Profit:           %8s%%`
 			log.Println("Trade error", err)
 		}
 	}
+	return nil
 }
 
 func (ant *Ant) PollMixinMessage(ctx context.Context) {

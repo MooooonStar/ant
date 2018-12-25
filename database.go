@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 
+	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 )
 
 const (
 	DatabaseContextKey = "database_context_key"
+	keyRedis           = "key_redis"
 )
 
 func Database(ctx context.Context) *gorm.DB {
@@ -16,4 +18,13 @@ func Database(ctx context.Context) *gorm.DB {
 
 func SetDB(ctx context.Context, db *gorm.DB) context.Context {
 	return context.WithValue(ctx, DatabaseContextKey, db)
+}
+
+func SetupRedis(ctx context.Context, client *redis.Client) context.Context {
+	return context.WithValue(ctx, keyRedis, client)
+}
+
+func Redis(ctx context.Context) *redis.Client {
+	v, _ := ctx.Value(keyRedis).(*redis.Client)
+	return v
 }
