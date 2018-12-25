@@ -66,7 +66,11 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent, id ...int) {
 		}
 	}
 
-	template := `Action:           %8s,Pair:          %8s,Price:       %10.8s,Amount:      %8s,Profit:           %8s%%`
+	template := `Action:           %8s,
+Pair:          %8s,
+Price:       %10.8s,
+Amount:      %8s,
+Profit:           %8s%%`
 	ocean := bot.Button{Label: "ocean", Action: OceanWebsite, Color: "#2e8b57"}
 	exin := bot.Button{Label: "exin", Action: ExinWebsite, Color: "#bc8f8f"}
 	msg := fmt.Sprintf(template, event.Category, Who(event.Base)+"/"+Who(event.Quote), event.Price.String(),
