@@ -86,14 +86,6 @@ func TestOrderMemo(t *testing.T) {
 	var action OceanTransfer
 	action.Unpack(match)
 	fmt.Println(action.A, action.B, action.O, action.S)
-
-	var order OceanOrder
-	order.Unpack("hKFToUGhUKozNDQwLjExNDU3oVShTKFBsIFbCxonZDc2j6pC1pT6Ygo=")
-	fmt.Println("order==", order)
-}
-
-func TestExinMemo(t *testing.T) {
-	ExinTradeMessager("buy", "2", EOS, USDT)
 }
 
 func TestReadAssets(t *testing.T) {

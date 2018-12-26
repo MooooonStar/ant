@@ -140,24 +140,3 @@ func (ant *Ant) PollMixinMessage(ctx context.Context) {
 		time.Sleep(1 * time.Second)
 	}
 }
-
-func SearchUser(ctx context.Context, id string) (string, error) {
-	method, uri := "GET", "/search/"+id
-	token, err := bot.SignAuthenticationToken(ClientId, SessionId, PrivateKey, "GET", uri, "")
-	if err != nil {
-		return "", err
-	}
-	bt, err := bot.Request(ctx, method, uri, nil, token)
-	if err != nil {
-		return "", err
-	}
-
-	var resp struct {
-		Data struct {
-			UserId string `json:"user_id"`
-		} `json:"data"`
-	}
-
-	err = json.Unmarshal(bt, &resp)
-	return resp.Data.UserId, err
-}
