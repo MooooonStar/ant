@@ -10,16 +10,15 @@ import (
 
 	"github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
-	uuid "github.com/satori/go.uuid"
-
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
-var baseSymbols = []string{"BTC", "EOS", "ETH"}
+var baseSymbols = []string{"BTC", "EOS", "ETH", "XIN"}
 var quoteSymbols = []string{"BTC", "USDT"}
 
 func main() {
