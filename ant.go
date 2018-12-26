@@ -24,20 +24,24 @@ const (
 )
 
 type ProfitEvent struct {
-	ID            string          `json:"-"`
-	Category      string          `json:"category"`
-	Price         decimal.Decimal `json:"price"`
-	Profit        decimal.Decimal `json:"profit"`
-	Amount        decimal.Decimal `json:"amount"`
-	Min           decimal.Decimal `json:"min"`
-	Max           decimal.Decimal `json:"max"`
-	Base          string          `json:"base"`
-	Quote         string          `json:"quote"`
+	ID            string          `json:"-"                gorm:"type:varchar(36);primary_key"`
+	Category      string          `json:"category"         gorm:"type:varchar(10)"`
+	Price         decimal.Decimal `json:"price"            gorm:"type:varchar(36)"`
+	Profit        decimal.Decimal `json:"profit"           gorm:"type:varchar(36)"`
+	Amount        decimal.Decimal `json:"amount"           gorm:"type:varchar(36)"`
+	Min           decimal.Decimal `json:"min"              gorm:"type:varchar(36)"`
+	Max           decimal.Decimal `json:"max"              gorm:"type:varchar(36)"`
+	Base          string          `json:"base"             gorm:"type:varchar(36)"`
+	Quote         string          `json:"quote"            gorm:"type:varchar(36)"`
 	CreatedAt     time.Time       `json:"created_at"`
-	Expire        int64           `json:"expire"`
-	BaseAmount    decimal.Decimal `json:"base_amount"`
-	QuoteAmount   decimal.Decimal `json:"quote_amount"`
-	ExchangeOrder string          `json:"exchange_order"`
+	Expire        int64           `json:"expire"           gorm:"type:int(36)"`
+	BaseAmount    decimal.Decimal `json:"base_amount"      gorm:"type:varchar(36)"`
+	QuoteAmount   decimal.Decimal `json:"quote_amount"     gorm:"type:varchar(36)"`
+	ExchangeOrder string          `json:"exchange_order"   gorm:"type:varchar(36);unique;"`
+}
+
+func (ProfitEvent) TableName() string {
+	return "bot_profit_events"
 }
 
 type Ant struct {
@@ -146,6 +150,10 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 		return err
 	}
 
+	if err := Database(ctx).FirstOrCreate(e).Error; err != nil {
+		return err
+	}
+
 	amount = amount.Mul(decimal.NewFromFloat(-1.0))
 	if e.Category == PageSideBid {
 		e.QuoteAmount = amount
@@ -216,6 +224,12 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				}
 			}
 			for _, idx := range expired {
+				if value, ok := ant.orderQueue.Get(idx); ok {
+					event := value.(*ProfitEvent)
+					if err := Database(ctx).Where(event).Update(event); err != nil {
+						log.Println("update event error", err)
+					}
+				}
 				ant.orderQueue.Remove(idx)
 			}
 		}
