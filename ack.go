@@ -70,14 +70,29 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				log.Println("Remove user err", err)
 			}
 			ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back.")
+		case "profit":
+			pre, err := SumAssetsInit(ctx)
+			if err != nil {
+				log.Println("Get profit err", err)
+			}
+			now, err := SumAssetsNow(ctx)
+			if err != nil {
+				log.Println("Get profit err", err)
+			}
+			ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("start:%.2f,end:%.2f,gain:%.2f", pre, now, now-pre))
 		default:
-			reply := strings.Replace(string(data), "么", "", -1)
-			reply = strings.Replace(reply, "吗", "", -1)
-			reply = strings.Replace(reply, "嘛", "", -1)
-			reply = strings.Replace(reply, "啊", "", -1)
-			reply = strings.Replace(reply, "?", "!", -1)
-			reply = strings.Replace(reply, "？", "！", -1)
-			ant.client.SendPlainText(ctx, msgView, reply)
+			reply, err := Reply(string(data))
+			if err != nil {
+				ant.client.SendPlainText(ctx, msgView, "I am busy!!! Stop disturbing me.")
+			} else {
+				start := strings.Index(reply, "{br}")
+				end := strings.LastIndex(reply, "{br}")
+				content := reply
+				if start >= 0 && end < len(reply) {
+					content = strings.Replace(reply[start:end], "{br}", "\n", -1)
+				}
+				ant.client.SendPlainText(ctx, msgView, content)
+			}
 		}
 	}
 	return nil

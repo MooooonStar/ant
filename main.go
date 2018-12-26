@@ -2,15 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/MixinNetwork/bot-api-go-client"
+	"github.com/MixinNetwork/go-number"
+	uuid "github.com/satori/go.uuid"
+
 	"github.com/go-redis/redis"
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	log "github.com/sirupsen/logrus"
@@ -27,19 +29,23 @@ func main() {
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
 		{
-			Name:  "balance",
-			Usage: "show balance",
+			Name:  "clear",
+			Usage: "clear all assets",
 			Action: func(c *cli.Context) error {
 				assets, err := ReadAssets(context.TODO())
 				if err != nil {
 					return err
 				}
-				balance := make(map[string]string, 0)
-				for asset, amount := range assets {
-					balance[Who(asset)] = amount
+				for asset, balance := range assets {
+					in := bot.TransferInput{
+						AssetId:     asset,
+						RecipientId: "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909",
+						Amount:      number.FromString(balance),
+						TraceId:     uuid.Must(uuid.NewV4()).String(),
+						Memo:        "master, give you the money",
+					}
+					bot.CreateTransfer(context.Background(), &in, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 				}
-				v, _ := prettyjson.Marshal(balance)
-				fmt.Println(string(v))
 				return nil
 			},
 		},

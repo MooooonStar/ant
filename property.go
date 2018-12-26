@@ -7,21 +7,19 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	prettyjson "github.com/hokaccha/go-prettyjson"
-	"github.com/jinzhu/gorm"
+	"github.com/shopspring/decimal"
 )
 
-type Wallet struct {
-	ID        uint      `gorm:"primary_key"       json:"-"`
-	CreatedAt time.Time `gorm:"created_at"        json:"time"`
-	BTC       string    `gorm:"type:varchar(20);" json:"BTC"`
-	ETH       string    `gorm:"type:varchar(20);" json:"ETH"`
-	EOS       string    `gorm:"type:varchar(20);" json:"EOS"`
-	XIN       string    `gorm:"type:varchar(20);" json:"XIN"`
-	USDT      string    `gorm:"type:varchar(20);" json:"USDT"`
+var Wallet = map[string]float64{
+	BTC:  0.01,
+	EOS:  10,
+	ETH:  1,
+	USDT: 100,
 }
 
 func ReadAssets(ctx context.Context) (map[string]string, error) {
@@ -131,25 +129,37 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 	return resp.Data.TraceId, nil
 }
 
-func SaveProperty(ctx context.Context, db *gorm.DB) error {
-	assets, err := ReadAssets(context.TODO())
+func SumAssetsNow(ctx context.Context) (float64, error) {
+	prices, err := GetExinPrices(ctx, USDT)
 	if err != nil {
-		return err
+		return 0, err
+	}
+	assets, err := ReadAssets(ctx)
+	if err != nil {
+		return 0, err
 	}
 
-	balance := make(map[string]string, 0)
-	for asset, amount := range assets {
-		balance[Who(asset)] = amount
+	sum := decimal.Zero
+	for asset, balance := range assets {
+		price, _ := decimal.NewFromString(prices[asset])
+		amount, _ := decimal.NewFromString(balance)
+		sum = sum.Add(price.Mul(amount))
+	}
+	s, _ := sum.Float64()
+	return s, nil
+}
+
+func SumAssetsInit(ctx context.Context) (float64, error) {
+	prices, err := GetExinPrices(ctx, USDT)
+	if err != nil {
+		return 0, err
 	}
 
-	bt, err := json.Marshal(balance)
-	if err != nil {
-		return err
+	sum := 0.0
+	for asset, amount := range Wallet {
+		price, _ := strconv.ParseFloat(prices[asset], 64)
+		sum += price * amount
 	}
-	var wallet Wallet
-	err = json.Unmarshal(bt, &wallet)
-	if err != nil {
-		return err
-	}
-	return db.Create(&wallet).Error
+
+	return sum, nil
 }
