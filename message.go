@@ -53,19 +53,19 @@ func NewClient(ctx context.Context, base, quote string, h MessageHandler) *Clien
 
 func (client *Client) PollOceanMessage(ctx context.Context) error {
 	for {
-		subCtx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(ctx)
 		dialer := websocket.DefaultDialer
 		conn, _, err := dialer.Dial(endpoint, nil)
 		if err != nil {
 			continue
 		}
-		if err := client.Subscribe(subCtx, conn); err != nil {
+		if err := client.Subscribe(ctx, conn); err != nil {
 			continue
 		}
 
-		go client.WritePump(subCtx, conn, []byte("ping"))
-		go client.ReadPump(subCtx, conn)
-		if err := client.process(subCtx); err != nil {
+		go client.WritePump(ctx, conn, []byte("ping"))
+		go client.ReadPump(ctx, conn)
+		if err := client.process(ctx); err != nil {
 			cancel()
 			conn.Close()
 			log.Error(err)

@@ -9,7 +9,7 @@ import (
 
 const (
 	DatabaseContextKey = "database_context_key"
-	keyRedis           = "key_redis"
+	keyRedis           = "redis_context_key"
 )
 
 func Database(ctx context.Context) *gorm.DB {

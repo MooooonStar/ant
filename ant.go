@@ -93,6 +93,7 @@ func (ant *Ant) Clean() {
 			OceanCancel(trace)
 		}
 	}
+	//TODO, event中baseAmount和quoteAmout的数量和预期不一致
 	for it := ant.orderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
 		v, _ := prettyjson.Marshal(event)
@@ -247,8 +248,6 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 			event.BaseAmount = event.BaseAmount.Add(amount)
 		} else if s.AssetId == event.Quote {
 			event.QuoteAmount = event.QuoteAmount.Add(amount)
-		} else {
-			panic(s.AssetId)
 		}
 		it.End()
 	}
@@ -300,8 +299,6 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 		category = PageSideAsk
 	} else if side == PageSideAsk {
 		category = PageSideBid
-	} else {
-		panic(category)
 	}
 
 	profit := exchange.Price.Sub(otc.Price).Div(otc.Price)

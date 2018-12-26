@@ -28,7 +28,6 @@ const (
 
 var (
 	OceanCore = "aaff5bef-42fb-4c9f-90e0-29f69176b7d4"
-	F1exCore  = "32cc0fda-5deb-448a-be70-a81dac4a3eed"
 )
 
 type OceanOrder struct {

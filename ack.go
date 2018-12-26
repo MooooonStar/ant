@@ -38,7 +38,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 		if err != nil {
 			return err
 		}
-		switch strings.ToLower(string(data)) {
+		switch string(data) {
 		case "whoisyourdaddy":
 			assets, err := ReadAssets(ctx)
 			if err != nil {
@@ -59,7 +59,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			if _, err := Redis(ctx).SAdd(SubcribedUser, msgView.UserId).Result(); err != nil {
 				log.Println("Add user err", err)
 			}
-			ant.client.SendPlainText(ctx, msgView, "Thanks for your attention.\n You will get a notification if you can benefit from the price differences below.")
+			ant.client.SendPlainText(ctx, msgView, "Thanks for your attention.\n You may get a notification if you can benefit from the price differences below.")
 			ocean := bot.Button{Label: "Mixcoin", Action: OceanWebsite, Color: "#2e8b57"}
 			exin := bot.Button{Label: "ExinOne", Action: fmt.Sprintf(ExinWebsite, 15), Color: "#bc8f8f"}
 			if err := ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin); err != nil {
@@ -69,15 +69,15 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			if _, err := Redis(ctx).SRem(SubcribedUser, msgView.UserId).Result(); err != nil {
 				log.Println("Remove user err", err)
 			}
-			ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back.")
+			ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back soon.")
 		case "profit":
 			pre, err := SumAssetsInit(ctx)
 			if err != nil {
-				log.Println("Get profit err", err)
+				log.Println("Sum assets init error", err)
 			}
 			now, err := SumAssetsNow(ctx)
 			if err != nil {
-				log.Println("Get profit err", err)
+				log.Println("Sum assets now error", err)
 			}
 			ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("start:%.2f,end:%.2f,gain:%.2f", pre, now, now-pre))
 		default:
@@ -108,7 +108,7 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent) error {
 		PageSideAsk: "Sell in Mixcoin",
 	}
 
-	template := "Action:  %-10s\nPair:         %-10s\nPrice:       %-10.8s\nAmount:    %-10s\nProfit:   %8s%%"
+	template := "Go Go Go!\nAction:  %-10s\nPair:         %-10s\nPrice:       %-10.8s\nAmount:    %-10s\nProfit:   %8s%%"
 	pair := Who(event.Base) + "/" + Who(event.Quote)
 	ocean := bot.Button{Label: "Mixcoin", Action: OceanWebsite, Color: "#2e8b57"}
 	exin := bot.Button{Label: "ExinOne", Action: fmt.Sprintf(ExinWebsite, PairIndex[pair]), Color: "#bc8f8f"}
