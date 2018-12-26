@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
@@ -37,7 +38,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 		if err != nil {
 			return err
 		}
-		switch string(data) {
+		switch strings.ToLower(string(data)) {
 		case "whoisyourdaddy":
 			assets, err := ReadAssets(ctx)
 			if err != nil {
@@ -58,15 +59,26 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			if _, err := Redis(ctx).SAdd(SubcribedUser, msgView.UserId).Result(); err != nil {
 				log.Println("Add user err", err)
 			}
-			ant.client.SendPlainText(ctx, msgView, "thanks for your attention")
-		case "trade":
-			ocean := bot.Button{Label: "ocean", Action: OceanWebsite, Color: "#2e8b57"}
-			exin := bot.Button{Label: "exin", Action: fmt.Sprintf(ExinWebsite, 15), Color: "#bc8f8f"}
+			ant.client.SendPlainText(ctx, msgView, "Thanks for your attention.\n You will get a notification if you can benefit from the price differences below.")
+			ocean := bot.Button{Label: "Mixcoin", Action: OceanWebsite, Color: "#2e8b57"}
+			exin := bot.Button{Label: "ExinOne", Action: fmt.Sprintf(ExinWebsite, 15), Color: "#bc8f8f"}
 			if err := ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin); err != nil {
 				log.Println("Trade error", err)
 			}
+		case "unsub":
+			if _, err := Redis(ctx).SRem(SubcribedUser, msgView.UserId).Result(); err != nil {
+				log.Println("Remove user err", err)
+			}
+			ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back.")
+		default:
+			reply := strings.Replace(string(data), "么", "", -1)
+			reply = strings.Replace(reply, "吗", "", -1)
+			reply = strings.Replace(reply, "嘛", "", -1)
+			reply = strings.Replace(reply, "啊", "", -1)
+			reply = strings.Replace(reply, "?", "!", -1)
+			reply = strings.Replace(reply, "？", "！", -1)
+			ant.client.SendPlainText(ctx, msgView, reply)
 		}
-
 	}
 	return nil
 }
@@ -76,16 +88,16 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent) error {
 	if err != nil {
 		return err
 	}
+	actions := map[string]string{
+		PageSideBid: " Buy in Mixcoin",
+		PageSideAsk: "Sell in Mixcoin",
+	}
 
-	template := `Action:           %8s,
-Pair:          %8s,
-Price:       %10.8s,
-Amount:      %8s,
-Profit:           %8s%%`
+	template := "Action:  %-10s\nPair:         %-10s\nPrice:       %-10.8s\nAmount:    %-10s\nProfit:   %8s%%"
 	pair := Who(event.Base) + "/" + Who(event.Quote)
-	ocean := bot.Button{Label: "ocean", Action: OceanWebsite, Color: "#2e8b57"}
-	exin := bot.Button{Label: "exin", Action: fmt.Sprintf(ExinWebsite, PairIndex[pair]), Color: "#bc8f8f"}
-	msg := fmt.Sprintf(template, event.Category, pair, event.Price.String(),
+	ocean := bot.Button{Label: "Mixcoin", Action: OceanWebsite, Color: "#2e8b57"}
+	exin := bot.Button{Label: "ExinOne", Action: fmt.Sprintf(ExinWebsite, PairIndex[pair]), Color: "#bc8f8f"}
+	msg := fmt.Sprintf(template, actions[event.Category], pair, event.Price.String(),
 		event.Amount.String(), event.Profit.Mul(decimal.NewFromFloat(100.0)).Round(2).String())
 
 	for _, user := range users {
