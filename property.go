@@ -16,7 +16,7 @@ import (
 )
 
 var Wallet = map[string]float64{
-	BTC:  0.013,
+	BTC:  0.010,
 	EOS:  10,
 	ETH:  1,
 	USDT: 100,

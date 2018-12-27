@@ -86,7 +86,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			} else {
 				start := strings.Index(reply, "{br}")
 				end := strings.LastIndex(reply, "{br}")
-				content := reply
+				content := strings.Replace(reply, "&quot;", "'", -1)
 				if start >= 0 && end < len(reply) {
 					content = strings.Replace(reply[start:end], "{br}", "\n", -1)
 				}

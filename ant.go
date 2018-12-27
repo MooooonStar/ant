@@ -85,7 +85,7 @@ func UuidWithString(str string) string {
 	return uuid.FromBytesOrNil(sum).String()
 }
 
-func (ant *Ant) OnBlaseMessage(base, quote string) *OrderBook {
+func (ant *Ant) OnOrderMessage(base, quote string) *OrderBook {
 	pair := base + "-" + quote
 	ant.books[pair] = NewBook(base, quote)
 	return ant.books[pair]

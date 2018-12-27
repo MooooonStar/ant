@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"strings"
@@ -32,7 +31,7 @@ type BlazeMessage struct {
 }
 
 type MessageHandler interface {
-	OnBlaseMessage(*BlazeMessage) error
+	OnOrderMessage(*BlazeMessage) error
 }
 
 type Client struct {
@@ -79,13 +78,13 @@ func (client *Client) process(ctx context.Context) error {
 	for {
 		select {
 		case msg := <-client.receive:
-			if err := client.handler.OnBlaseMessage(msg); err != nil {
+			if err := client.handler.OnOrderMessage(msg); err != nil {
 				if strings.Contains(err.Error(), WrongSequenceError) {
 					return err
 				}
 			}
 		case <-time.After(handleWait):
-			return fmt.Errorf("no message in 60s, reconnecting...")
+			return errors.New("no message in 60s, reconnecting...")
 		}
 	}
 }
