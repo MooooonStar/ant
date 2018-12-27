@@ -97,7 +97,7 @@ func TestReadAssets(t *testing.T) {
 }
 
 func TestSumAssets(t *testing.T) {
-	prices, err := GetExinPrices(context.Background(), USDT)
+	prices, err := GetExinPrices(context.Background(), BTC)
 	if err != nil {
 		panic(err)
 	}
