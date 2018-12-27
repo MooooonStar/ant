@@ -33,13 +33,12 @@ var PairIndex = map[string]int{
 }
 
 func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId string) error {
-	log.Println("++++++++++I got a message++++++++++++")
 	if msgView.Category == bot.MessageCategoryPlainText {
 		data, err := base64.StdEncoding.DecodeString(msgView.Data)
 		if err != nil {
 			return err
 		}
-		log.Println("message received:", string(data))
+		log.Println("I got a message, it said: ", string(data))
 		switch string(data) {
 		case "whoisyourdaddy":
 			assets, err := ReadAssets(ctx)
@@ -56,7 +55,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			if err != nil {
 				return err
 			}
-			ant.client.SendPlainText(ctx, msgView, string(bt))
+			return ant.client.SendPlainText(ctx, msgView, string(bt))
 		case "sub":
 			if _, err := Redis(ctx).SAdd(SubcribedUser, msgView.UserId).Result(); err != nil {
 				log.Println("Add user err", err)
@@ -64,28 +63,26 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			ant.client.SendPlainText(ctx, msgView, "Thanks for your attention.\n You may get a notification if you can benefit from the price differences below.")
 			ocean := bot.Button{Label: "Mixcoin", Action: OceanWebsite, Color: "#2e8b57"}
 			exin := bot.Button{Label: "ExinOne", Action: fmt.Sprintf(ExinWebsite, 15), Color: "#bc8f8f"}
-			if err := ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin); err != nil {
-				log.Println("Trade error", err)
-			}
+			return ant.client.SendAppButtons(ctx, msgView.ConversationId, msgView.UserId, ocean, exin)
 		case "unsub":
 			if _, err := Redis(ctx).SRem(SubcribedUser, msgView.UserId).Result(); err != nil {
-				log.Println("Remove user err", err)
+				return err
 			}
-			ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back soon.")
+			return ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back soon.")
 		case "profit":
 			pre, err := SumAssetsInit(ctx)
 			if err != nil {
-				log.Println("Sum assets init error", err)
+				return err
 			}
 			now, err := SumAssetsNow(ctx)
 			if err != nil {
-				log.Println("Sum assets now error", err)
+				return err
 			}
-			ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("start:%.2f,end:%.2f,gain:%.2f", pre, now, now-pre))
+			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("start:%.2f,end:%.2f,gain:%.2f", pre, now, now-pre))
 		default:
 			reply, err := Reply(string(data))
 			if err != nil {
-				ant.client.SendPlainText(ctx, msgView, "I am busy!!! Stop disturbing me.")
+				return ant.client.SendPlainText(ctx, msgView, "I am busy!!! Stop disturbing me.")
 			} else {
 				start := strings.Index(reply, "{br}")
 				end := strings.LastIndex(reply, "{br}")
@@ -93,7 +90,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				if start >= 0 && end < len(reply) {
 					content = strings.Replace(reply[start:end], "{br}", "\n", -1)
 				}
-				ant.client.SendPlainText(ctx, msgView, content)
+				return ant.client.SendPlainText(ctx, msgView, content)
 			}
 		}
 	}
@@ -136,8 +133,6 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent) error {
 
 func (ant *Ant) PollMixinMessage(ctx context.Context) {
 	for {
-		log.Println("-----Poll Mixin Message error-----------")
-		ant.client = bot.NewBlazeClient(ClientId, SessionId, PrivateKey)
 		if err := ant.client.Loop(ctx, ant); err != nil {
 			log.Println(err)
 		}
