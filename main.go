@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -67,7 +68,8 @@ func main() {
 					if err != nil {
 						panic(err)
 					}
-					log.SetOutput(file)
+					writer := io.MultiWriter(os.Stdout, file)
+					log.SetOutput(writer)
 				}
 
 				pair := c.String("pair")

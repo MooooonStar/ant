@@ -320,11 +320,12 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 		profit = profit.Mul(decimal.NewFromFloat(-1.0))
 	}
 
-	msg := fmt.Sprintf("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.String(), exchange.Price, otc.Price, profit, Who(base), Who(quote))
-	log.Println(msg)
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
+
+	msg := fmt.Sprintf("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.String(), exchange.Price, otc.Price, profit, Who(base), Who(quote))
+	log.Println(msg)
 
 	id := UuidWithString(ClientId + exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
 	event := ProfitEvent{
