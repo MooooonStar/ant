@@ -7,12 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -68,7 +68,7 @@ func (client *Client) PollOceanMessage(ctx context.Context) error {
 		if err := client.process(ctx); err != nil {
 			cancel()
 			conn.Close()
-			log.Error(err)
+			log.Println(err)
 		}
 
 		time.Sleep(100 * time.Millisecond)

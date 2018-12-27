@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/hokaccha/go-prettyjson"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -66,7 +66,7 @@ func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 	for {
 		snapshots, err := ex.requestMixinNetwork(ctx, checkpoint, limit)
 		if err != nil {
-			log.Error("PollMixinNetwork ERROR", err)
+			log.Println("PollMixinNetwork ERROR", err)
 			time.Sleep(PollInterval)
 			continue
 		}
@@ -101,10 +101,10 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	}
 
 	v, _ := prettyjson.Marshal(s)
-	log.Info("find snapshot", string(v))
+	log.Println("find snapshot", string(v))
 
 	if err := ex.HandleSnapshot(ctx, s); err != nil {
-		log.Error(err)
+		log.Println(err)
 		return err
 	}
 

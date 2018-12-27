@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"testing"
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 

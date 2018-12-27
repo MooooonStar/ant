@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
 	"sort"
@@ -14,7 +15,10 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	uuid "github.com/satori/go.uuid"
+<<<<<<< HEAD
 	log "github.com/sirupsen/logrus"
+=======
+>>>>>>> change log
 	"github.com/urfave/cli"
 )
 
@@ -55,13 +59,9 @@ func main() {
 				cli.StringFlag{Name: "pair"},
 				cli.BoolFlag{Name: "ocean"},
 				cli.BoolFlag{Name: "exin"},
-				cli.BoolFlag{Name: "debug"},
 				cli.BoolFlag{Name: "file"},
 			},
 			Action: func(c *cli.Context) error {
-				if debug := c.Bool("debug"); debug {
-					log.SetLevel(log.DebugLevel)
-				}
 				if tofile := c.Bool("file"); tofile {
 					file, err := os.OpenFile("/tmp/ant.log", os.O_WRONLY|os.O_APPEND, 0666)
 					if err != nil {

@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"log"
 	"sync"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -167,7 +167,7 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 
 func LimitAmount(amount, balance, min, max decimal.Decimal) decimal.Decimal {
 	if amount.LessThanOrEqual(min) {
-		log.Errorf("amount too small, %v < min : %v", amount, min)
+		log.Printf("amount too small, %v < min : %v", amount, min)
 		return decimal.Zero
 	}
 
@@ -213,10 +213,10 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					}
 
 					if !limited.IsPositive() {
-						log.Errorf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
+						log.Printf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
 					} else {
 						if _, err := ExinTrade(side, limited.String(), event.Base, event.Quote); err != nil {
-							log.Error(err)
+							log.Println(err)
 							continue
 						}
 					}
@@ -278,7 +278,7 @@ func (ant *Ant) Trade(ctx context.Context) error {
 			return ctx.Err()
 		case e := <-ant.event:
 			if err := ant.trade(ctx, e); err != nil {
-				log.Error(err)
+				log.Println(err)
 			}
 		}
 	}
@@ -321,11 +321,10 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	}
 
 	msg := fmt.Sprintf("%s --amount:%10.8v, ocean price: %10.8v, exin price: %10.8v, profit: %10.8v, %5v/%5v", side, exchange.Amount.String(), exchange.Price, otc.Price, profit, Who(base), Who(quote))
-	log.Debug(msg)
+	log.Println(msg)
 	if profit.LessThan(decimal.NewFromFloat(ProfitThreshold)) {
 		return
 	}
-	log.Info(msg)
 
 	id := UuidWithString(ClientId + exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
 	event := ProfitEvent{

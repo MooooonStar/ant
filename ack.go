@@ -5,13 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -33,11 +33,13 @@ var PairIndex = map[string]int{
 }
 
 func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId string) error {
-	if msgView.Category == bot.MessageCategoryPlainText && msgView.ConversationId == bot.UniqueConversationId(ClientId, msgView.UserId) {
+	log.Println("++++++++++I got a message++++++++++++")
+	if msgView.Category == bot.MessageCategoryPlainText {
 		data, err := base64.StdEncoding.DecodeString(msgView.Data)
 		if err != nil {
 			return err
 		}
+		log.Println("message received:", string(data))
 		switch string(data) {
 		case "whoisyourdaddy":
 			assets, err := ReadAssets(ctx)
@@ -134,6 +136,7 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent) error {
 
 func (ant *Ant) PollMixinMessage(ctx context.Context) {
 	for {
+		log.Println("-----Poll Mixin Message error-----------")
 		ant.client = bot.NewBlazeClient(ClientId, SessionId, PrivateKey)
 		if err := ant.client.Loop(ctx, ant); err != nil {
 			log.Println(err)
