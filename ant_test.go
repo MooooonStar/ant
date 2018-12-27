@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,4 +94,21 @@ func TestReadAssets(t *testing.T) {
 	data, _ := ReadAssets(context.TODO())
 	v, _ := prettyjson.Marshal(data)
 	fmt.Println(string(v))
+}
+
+func TestSumAssets(t *testing.T) {
+	prices, err := GetExinPrices(context.Background(), USDT)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println("prices", prices)
+
+	sum := 0.0
+	for asset, amount := range Wallet {
+		price, _ := strconv.ParseFloat(prices[asset], 64)
+		sum += price * amount
+	}
+
+	log.Println("sum", sum)
 }

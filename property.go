@@ -139,7 +139,7 @@ func SumAssetsNow(ctx context.Context) (float64, error) {
 		return 0, err
 	}
 
-	sum := decimal.Zero
+	sum, _ := decimal.NewFromString(assets[USDT])
 	for asset, balance := range assets {
 		price, _ := decimal.NewFromString(prices[asset])
 		amount, _ := decimal.NewFromString(balance)
@@ -155,7 +155,7 @@ func SumAssetsInit(ctx context.Context) (float64, error) {
 		return 0, err
 	}
 
-	sum := 0.0
+	sum := Wallet[USDT]
 	for asset, amount := range Wallet {
 		price, _ := strconv.ParseFloat(prices[asset], 64)
 		sum += price * amount
