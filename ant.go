@@ -192,7 +192,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			expired := make([]int, 0)
 			for it := ant.orderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
-				if event.CreatedAt.Add(time.Duration(event.Expire)).Before(time.Now()) {
+				if event.CreatedAt.Add(time.Duration(2 * event.Expire)).Before(time.Now()) {
 					expired = append(expired, it.Index())
 					amount := event.BaseAmount
 					send, side := event.Base, PageSideAsk

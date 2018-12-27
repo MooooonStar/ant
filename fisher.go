@@ -49,7 +49,7 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 							Price:  bidFishing.Truncate(-precision + 1),
 							Amount: amount,
 						}
-						ant.Inspect(ctx, exchange, otc.Asks[0], base, quote, PageSideBid, 10*OrderExpireTime)
+						ant.Inspect(ctx, exchange, otc.Asks[0], base, quote, PageSideBid, 6*OrderExpireTime)
 					}
 				}
 
@@ -60,7 +60,7 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 							Price:  askFishing.Truncate(-precision + 1),
 							Amount: amount,
 						}
-						ant.Inspect(ctx, exchange, otc.Bids[0], base, quote, PageSideAsk, 10*OrderExpireTime)
+						ant.Inspect(ctx, exchange, otc.Bids[0], base, quote, PageSideAsk, 6*OrderExpireTime)
 					}
 				}
 				orders[trade.CreateAt] = true
