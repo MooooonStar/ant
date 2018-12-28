@@ -38,6 +38,7 @@ type ProfitEvent struct {
 	BaseAmount    decimal.Decimal `json:"base_amount"      gorm:"type:varchar(36)"`
 	QuoteAmount   decimal.Decimal `json:"quote_amount"     gorm:"type:varchar(36)"`
 	ExchangeOrder string          `json:"exchange_order"   gorm:"type:varchar(36);"`
+	OtcOrder      string          `json:"otc_order"   gorm:"type:varchar(36);"`
 }
 
 func (ProfitEvent) TableName() string {
@@ -215,10 +216,12 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					if !limited.IsPositive() {
 						log.Printf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
 					} else {
-						if _, err := ExinTrade(side, limited.String(), event.Base, event.Quote); err != nil {
+						otcOrder := UuidWithString(event.ID + ExinCore)
+						if _, err := ExinTrade(side, limited.String(), event.Base, event.Quote, otcOrder); err != nil {
 							log.Println(err)
 							continue
 						}
+						event.OtcOrder = otcOrder
 					}
 					ant.orders[event.ExchangeOrder] = true
 				}
@@ -328,12 +331,16 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 	log.Println(msg)
 
 	id := UuidWithString(ClientId + exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
+	amount := exchange.Amount
+	//多付款，保证扣完手续费后能全买下
+	if category == PageSideBid {
+		exchange.Amount.Mul(decimal.NewFromFloat(1.1)).Round(8)
+	}
 	event := ProfitEvent{
-		ID:       id,
-		Category: category,
-		Price:    exchange.Price,
-		//多付款，保证扣完手续费后能全买下
-		Amount:      exchange.Amount.Mul(decimal.NewFromFloat(1.1)).Round(8),
+		ID:          id,
+		Category:    category,
+		Price:       exchange.Price,
+		Amount:      amount,
 		Min:         otc.Min,
 		Max:         otc.Max,
 		Profit:      profit,
