@@ -42,7 +42,7 @@ type ProfitEvent struct {
 }
 
 func (ProfitEvent) TableName() string {
-	return "bot_profit_events"
+	return "profit_events"
 }
 
 type Ant struct {
@@ -226,6 +226,8 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						} else if side == PageSideAsk {
 							event.BaseAmount = event.BaseAmount.Sub(limited)
 						}
+						v, _ := prettyjson.Marshal(event)
+						log.Println("order matched:", string(v))
 					}
 					ant.orders[event.ExchangeOrder] = true
 				}
