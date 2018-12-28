@@ -135,6 +135,7 @@ func (ant *Ant) Notice(ctx context.Context, event ProfitEvent) error {
 
 func (ant *Ant) PollMixinMessage(ctx context.Context) {
 	for {
+		ant.client = bot.NewBlazeClient(ClientId, SessionId, PrivateKey)
 		if err := ant.client.Loop(ctx, ant); err != nil {
 			log.Println(err)
 		}

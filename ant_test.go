@@ -26,7 +26,7 @@ func TestExinOrder(t *testing.T) {
 }
 
 func TestOceanTrade(t *testing.T) {
-	order, err := OceanTrade(PageSideAsk, "0", "1.5", "M", EOS, BTC)
+	order, err := OceanTrade(PageSideAsk, "0", "1.2", "M", EOS, BTC)
 	assert.Nil(t, err)
 	fmt.Println("order", order)
 }
@@ -40,7 +40,7 @@ func TestOceanDepth(t *testing.T) {
 
 func TestExinTrade(t *testing.T) {
 	//price, amount := 3936.6133, 0.0003
-	trace, err := ExinTrade(PageSideBid, "1.0", EOS, USDT)
+	trace, err := ExinTrade(PageSideAsk, "0.6", EOS, BTC)
 	fmt.Println(trace, err)
 }
 

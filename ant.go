@@ -34,10 +34,10 @@ type ProfitEvent struct {
 	Base          string          `json:"base"             gorm:"type:varchar(36)"`
 	Quote         string          `json:"quote"            gorm:"type:varchar(36)"`
 	CreatedAt     time.Time       `json:"created_at"`
-	Expire        int64           `json:"expire"           gorm:"type:int(36)"`
+	Expire        int64           `json:"expire"           gorm:"type:bigint(36)"`
 	BaseAmount    decimal.Decimal `json:"base_amount"      gorm:"type:varchar(36)"`
 	QuoteAmount   decimal.Decimal `json:"quote_amount"     gorm:"type:varchar(36)"`
-	ExchangeOrder string          `json:"exchange_order"   gorm:"type:varchar(36);unique;"`
+	ExchangeOrder string          `json:"exchange_order"   gorm:"type:varchar(36);"`
 }
 
 func (ProfitEvent) TableName() string {
@@ -150,10 +150,6 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 		return err
 	}
 
-	if err := Database(ctx).FirstOrCreate(e).Error; err != nil {
-		return err
-	}
-
 	amount = amount.Mul(decimal.NewFromFloat(-1.0))
 	if e.Category == PageSideBid {
 		e.QuoteAmount = amount
@@ -162,6 +158,10 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 	}
 	e.ExchangeOrder = exchangeOrder
 	ant.orderQueue.Add(e)
+
+	if err := Database(ctx).FirstOrCreate(e).Error; err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -226,7 +226,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			for _, idx := range expired {
 				if value, ok := ant.orderQueue.Get(idx); ok {
 					event := value.(*ProfitEvent)
-					if err := Database(ctx).Where(event).Update(event); err != nil {
+					if err := Database(ctx).Model(event).Where(event).Updates(map[string]string{"base_amount": event.BaseAmount.String(), "quote_amount": event.QuoteAmount.String()}).Error; err != nil {
 						log.Println("update event error", err)
 					}
 				}
