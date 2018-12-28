@@ -229,7 +229,8 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			for _, idx := range expired {
 				if value, ok := ant.orderQueue.Get(idx); ok {
 					event := value.(*ProfitEvent)
-					if err := Database(ctx).Model(event).Where(event).Updates(map[string]string{"base_amount": event.BaseAmount.String(), "quote_amount": event.QuoteAmount.String()}).Error; err != nil {
+					updates := ProfitEvent{BaseAmount: event.BaseAmount, QuoteAmount: event.QuoteAmount, OtcOrder: event.OtcOrder}
+					if err := Database(ctx).Model(event).Where(event).Updates(updates).Error; err != nil {
 						log.Println("update event error", err)
 					}
 				}
