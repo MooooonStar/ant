@@ -151,11 +151,10 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 		return err
 	}
 
-	amount = amount.Mul(decimal.NewFromFloat(-1.0))
 	if e.Category == PageSideBid {
-		e.QuoteAmount = amount
+		e.QuoteAmount = e.QuoteAmount.Sub(amount)
 	} else {
-		e.BaseAmount = amount
+		e.BaseAmount = e.BaseAmount.Sub(amount)
 	}
 	e.ExchangeOrder = exchangeOrder
 	ant.orderQueue.Add(e)
@@ -222,6 +221,11 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 							continue
 						}
 						event.OtcOrder = otcOrder
+						if side == PageSideBid {
+							event.QuoteAmount = event.QuoteAmount.Sub(limited)
+						} else if side == PageSideAsk {
+							event.BaseAmount = event.BaseAmount.Sub(limited)
+						}
 					}
 					ant.orders[event.ExchangeOrder] = true
 				}
@@ -241,35 +245,54 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 }
 
 func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
-	if s.SnapshotId == ExinCore {
-		return nil
-	}
 	amount, _ := decimal.NewFromString(s.Amount)
 	if amount.IsNegative() {
 		return nil
 	}
 
-	for it := ant.orderQueue.Iterator(); it.Next(); {
-		event := it.Value().(*ProfitEvent)
+	if s.SnapshotId == ExinCore {
+		var reply ExinReply
+		if err := reply.Unpack(s.Data); err != nil {
+			return err
+		}
+		for it := ant.orderQueue.Iterator(); it.Next(); {
+			event := it.Value().(*ProfitEvent)
+
+			if event.OtcOrder != reply.O.String() {
+				continue
+			}
+
+			if s.AssetId == event.Base {
+				event.BaseAmount = event.BaseAmount.Add(amount)
+			} else if s.AssetId == event.Quote {
+				event.QuoteAmount = event.QuoteAmount.Add(amount)
+			}
+			it.End()
+		}
+		return nil
+	} else {
 		var order OceanTransfer
 		if err := order.Unpack(s.Data); err != nil {
 			return err
 		}
 
-		if event.ExchangeOrder != order.A.String() &&
-			event.ExchangeOrder != order.B.String() &&
-			event.ExchangeOrder != order.O.String() {
-			continue
-		}
+		for it := ant.orderQueue.Iterator(); it.Next(); {
+			event := it.Value().(*ProfitEvent)
+			if event.ExchangeOrder != order.A.String() &&
+				event.ExchangeOrder != order.B.String() &&
+				event.ExchangeOrder != order.O.String() {
+				continue
+			}
 
-		if s.AssetId == event.Base {
-			event.BaseAmount = event.BaseAmount.Add(amount)
-		} else if s.AssetId == event.Quote {
-			event.QuoteAmount = event.QuoteAmount.Add(amount)
+			if s.AssetId == event.Base {
+				event.BaseAmount = event.BaseAmount.Add(amount)
+			} else if s.AssetId == event.Quote {
+				event.QuoteAmount = event.QuoteAmount.Add(amount)
+			}
+			it.End()
 		}
-		it.End()
+		return nil
 	}
-	return nil
 }
 
 func (ant *Ant) Trade(ctx context.Context) error {

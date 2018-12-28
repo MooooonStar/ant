@@ -2,19 +2,67 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
 	"github.com/satori/go.uuid"
+	"github.com/vmihailenco/msgpack"
 )
 
 const (
 	ExinCore = "61103d28-3ac2-44a2-ae34-bd956070dab1"
 )
 
-//TODO
+type ExinOrder struct {
+	A uuid.UUID // asset uuid
+}
+
+func (order *ExinOrder) Pack() string {
+	pack, err := msgpack.Marshal(order)
+	if err != nil {
+		return ""
+	}
+
+	return base64.StdEncoding.EncodeToString(pack)
+}
+
+func (order *ExinOrder) Unpack(memo string) error {
+	parsedpack, err := base64.StdEncoding.DecodeString(memo)
+	if err != nil {
+		return err
+	}
+	return msgpack.Unmarshal(parsedpack, order)
+}
+
+type ExinReply struct {
+	C  int       // code
+	P  string    // price, only type is return
+	F  string    // ExinCore fee, only type is return
+	FA string    // ExinCore fee asset, only type is return
+	T  string    // type: refund(F)|return(R)|Error(E)
+	O  uuid.UUID // order: trace_id
+}
+
+func (order *ExinReply) Pack() string {
+	pack, err := msgpack.Marshal(order)
+	if err != nil {
+		return ""
+	}
+
+	return base64.StdEncoding.EncodeToString(pack)
+}
+
+func (order *ExinReply) Unpack(memo string) error {
+	parsedpack, err := base64.StdEncoding.DecodeString(memo)
+	if err != nil {
+		return err
+	}
+	return msgpack.Unmarshal(parsedpack, order)
+}
+
 func ExinTrade(side, amount, base, quote string, trace ...string) (string, error) {
 	traceId := uuid.Must(uuid.NewV4()).String()
 	if len(trace) == 1 {
