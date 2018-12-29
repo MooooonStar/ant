@@ -88,6 +88,11 @@ func TestOrderMemo(t *testing.T) {
 	var reply OceanReply
 	reply.Unpack(match)
 	fmt.Println(reply.A, reply.B, reply.O, reply.S)
+
+	var r ExinReply
+	r.Unpack("g6FDzQPsoVShRqFPxBA+z+cTxh4+lJdmI5/wKyEu")
+	v, _ := prettyjson.Marshal(r)
+	fmt.Println("exin==", string(v))
 }
 
 func TestExinMemo(t *testing.T) {

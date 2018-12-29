@@ -48,9 +48,9 @@ func GetAssetId(symbol string) string {
 	return symbolAssetId[symbol]
 }
 
-func Who(traceId string) string {
+func Who(asset string) string {
 	for k, v := range symbolAssetId {
-		if v == traceId {
+		if v == asset {
 			return k
 		}
 	}

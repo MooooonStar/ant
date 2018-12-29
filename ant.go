@@ -99,6 +99,7 @@ func (ant *Ant) Clean() {
 		}
 	}
 	//TODO, event中baseAmount和quoteAmout的数量和预期不一致
+	log.Println("+++exit because ctrl-c++++")
 	for it := ant.OrderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
 		v, _ := prettyjson.Marshal(event)
@@ -227,22 +228,23 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				}
 			}
 
-			go func(events []*ProfitEvent) {
-				select {
-				case <-time.After(3 * time.Second):
-					for _, event := range events {
-						v, _ := prettyjson.Marshal(event)
-						log.Println("expired event:", string(v))
-
-						index := ant.OrderQueue.IndexOf(event)
-						updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}
-						if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
-							log.Println("update event error", err)
+			if len(expired) > 0 {
+				go func(events []*ProfitEvent) {
+					select {
+					case <-time.After(3 * time.Second):
+						log.Println("size of queue before", ant.OrderQueue.Size())
+						for _, event := range events {
+							index := ant.OrderQueue.IndexOf(event)
+							updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}
+							if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
+								log.Println("update event error", err)
+							}
+							ant.OrderQueue.Remove(index)
 						}
-						ant.OrderQueue.Remove(index)
+						log.Println("size of queue after", ant.OrderQueue.Size())
 					}
-				}
-			}(expired)
+				}(expired)
+			}
 		}
 	}
 }
@@ -273,14 +275,15 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		}
 	}
 
-	v, _ := prettyjson.Marshal(matched)
-	log.Println("order matched", string(v))
-
 	if s.AssetId == matched.Base {
 		matched.BaseAmount = matched.BaseAmount.Add(amount)
 	} else if s.AssetId == matched.Quote {
 		matched.QuoteAmount = matched.QuoteAmount.Add(amount)
 	}
+
+	v0, _ := prettyjson.Marshal(matched)
+	log.Println("after matched", string(v0))
+
 	return nil
 }
 
