@@ -1,4 +1,4 @@
-package main
+package ant
 
 const (
 	ETC   = "2204c1ee-0ea2-4add-bb9a-b3719cfff93a"

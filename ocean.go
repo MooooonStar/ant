@@ -1,4 +1,4 @@
-package main
+package ant
 
 import (
 	bot "MoooonStar/bot-api-go-client"

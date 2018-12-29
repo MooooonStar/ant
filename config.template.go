@@ -1,6 +1,6 @@
 //+build template
 
-package main
+package ant
 
 const (
 	ClientId     = ""

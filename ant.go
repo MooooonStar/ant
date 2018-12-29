@@ -1,4 +1,4 @@
-package main
+package ant
 
 import (
 	"context"
@@ -38,7 +38,7 @@ type ProfitEvent struct {
 	BaseAmount    decimal.Decimal `json:"base_amount"      gorm:"type:varchar(36)"`
 	QuoteAmount   decimal.Decimal `json:"quote_amount"     gorm:"type:varchar(36)"`
 	ExchangeOrder string          `json:"exchange_order"   gorm:"type:varchar(36);"`
-	OtcOrder      string          `json:"otc_order"   gorm:"type:varchar(36);"`
+	OtcOrder      string          `json:"otc_order"        gorm:"type:varchar(36);"`
 }
 
 func (ProfitEvent) TableName() string {
@@ -189,11 +189,11 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			expired := make([]int, 0)
+			expired := make([]*ProfitEvent, 0)
 			for it := ant.orderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
-				if event.CreatedAt.Add(time.Duration(2 * event.Expire)).Before(time.Now()) {
-					expired = append(expired, it.Index())
+				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3 * time.Second).Before(time.Now()) {
+					expired = append(expired, event)
 					amount := event.BaseAmount
 					send, side := event.Base, PageSideAsk
 					if !amount.IsPositive() {
@@ -226,22 +226,27 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						} else if side == PageSideAsk {
 							event.BaseAmount = event.BaseAmount.Sub(limited)
 						}
-						v, _ := prettyjson.Marshal(event)
-						log.Println("order matched:", string(v))
 					}
 					ant.orders[event.ExchangeOrder] = true
 				}
 			}
-			for _, idx := range expired {
-				if value, ok := ant.orderQueue.Get(idx); ok {
-					event := value.(*ProfitEvent)
-					updates := ProfitEvent{BaseAmount: event.BaseAmount, QuoteAmount: event.QuoteAmount, OtcOrder: event.OtcOrder}
-					if err := Database(ctx).Model(event).Where(event).Updates(updates).Error; err != nil {
-						log.Println("update event error", err)
+
+			go func(events []*ProfitEvent) {
+				select {
+				case <-time.After(3 * time.Second):
+					for _, event := range events {
+						v, _ := prettyjson.Marshal(event)
+						log.Println("expired event:", string(v))
+
+						index := ant.orderQueue.IndexOf(event)
+						updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}
+						if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
+							log.Println("update event error", err)
+						}
+						ant.orderQueue.Remove(index)
 					}
 				}
-				ant.orderQueue.Remove(idx)
-			}
+			}(expired)
 		}
 	}
 }
@@ -252,7 +257,10 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
-	if s.SnapshotId == ExinCore {
+	if s.OpponentId == ExinCore {
+		v, _ := prettyjson.Marshal(s)
+		log.Println("find  exin snapshot : ", string(v))
+
 		var reply ExinReply
 		if err := reply.Unpack(s.Data); err != nil {
 			return err
@@ -260,19 +268,30 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		for it := ant.orderQueue.Iterator(); it.Next(); {
 			event := it.Value().(*ProfitEvent)
 
-			if event.OtcOrder != reply.O.String() {
-				continue
-			}
+			if event.OtcOrder == reply.O.String() {
+				v, _ := prettyjson.Marshal(event)
+				log.Println("exin order  matched: ", string(v))
 
-			if s.AssetId == event.Base {
-				event.BaseAmount = event.BaseAmount.Add(amount)
-			} else if s.AssetId == event.Quote {
-				event.QuoteAmount = event.QuoteAmount.Add(amount)
+				v0, _ := prettyjson.Marshal(event)
+				log.Println("event before : ", string(v0))
+
+				if s.AssetId == event.Base {
+					event.BaseAmount = event.BaseAmount.Add(amount)
+				} else if s.AssetId == event.Quote {
+					event.QuoteAmount = event.QuoteAmount.Add(amount)
+				}
+
+				v1, _ := prettyjson.Marshal(event)
+				log.Println("event after : ", string(v1))
+
+				it.End()
 			}
-			it.End()
 		}
 		return nil
 	} else {
+		v, _ := prettyjson.Marshal(s)
+		log.Println("find  ocean snapshot : ", string(v))
+
 		var order OceanTransfer
 		if err := order.Unpack(s.Data); err != nil {
 			return err
@@ -280,18 +299,26 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 
 		for it := ant.orderQueue.Iterator(); it.Next(); {
 			event := it.Value().(*ProfitEvent)
-			if event.ExchangeOrder != order.A.String() &&
-				event.ExchangeOrder != order.B.String() &&
-				event.ExchangeOrder != order.O.String() {
-				continue
-			}
+			if event.ExchangeOrder == order.A.String() ||
+				event.ExchangeOrder == order.B.String() ||
+				event.ExchangeOrder == order.O.String() {
 
-			if s.AssetId == event.Base {
-				event.BaseAmount = event.BaseAmount.Add(amount)
-			} else if s.AssetId == event.Quote {
-				event.QuoteAmount = event.QuoteAmount.Add(amount)
+				v, _ := prettyjson.Marshal(order)
+				log.Println("ocean order  matched : ", string(v))
+
+				v0, _ := prettyjson.Marshal(event)
+				log.Println("event before : ", string(v0))
+
+				if s.AssetId == event.Base {
+					event.BaseAmount = event.BaseAmount.Add(amount)
+				} else if s.AssetId == event.Quote {
+					event.QuoteAmount = event.QuoteAmount.Add(amount)
+				}
+				v1, _ := prettyjson.Marshal(event)
+				log.Println("event after : ", string(v1))
+
+				it.End()
 			}
-			it.End()
 		}
 		return nil
 	}

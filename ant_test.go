@@ -1,4 +1,4 @@
-package main
+package ant
 
 import (
 	"context"
@@ -84,10 +84,17 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsO8Id5AaGjcxppQ2d6tcyzahQrBE7ELXHndB37BYRgNXcaMjoU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
+	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+wutrcXgsEOXaKzrjqqodU+6FTpkNBTkNFTA=="
 	var action OceanTransfer
 	action.Unpack(match)
 	fmt.Println(action.A, action.B, action.O, action.S)
+}
+
+func TestExinReply(t *testing.T) {
+	var reply ExinReply
+	reply.Unpack("hqFDzQPooVCmMTEzLjAzoUaoMC4wMDI2NDWiRkHEEIFbCxonZDc2j6pC1pT6YgqhVKFGoU/EEF8NwUzCCjhOhEgAMv3/veg=")
+	v, _ := prettyjson.Marshal(reply)
+	log.Println(string(v))
 }
 
 func TestReadAssets(t *testing.T) {

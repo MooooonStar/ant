@@ -1,4 +1,4 @@
-package main
+package ant
 
 import (
 	"context"
@@ -17,9 +17,10 @@ import (
 
 var Wallet = map[string]float64{
 	BTC:  0.010,
-	EOS:  40,
+	EOS:  10,
 	ETH:  1,
 	USDT: 100,
+	XIN:  0.2,
 }
 
 func ReadAssets(ctx context.Context) (map[string]string, error) {
