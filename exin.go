@@ -14,6 +14,7 @@ import (
 
 const (
 	ExinCore = "61103d28-3ac2-44a2-ae34-bd956070dab1"
+	//ExinCore = "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909"
 )
 
 type ExinOrder struct {

@@ -131,6 +131,11 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 	}
 
 	amount := e.Amount
+	//多付款，保证扣完手续费后能全买下
+	if e.Category == PageSideBid {
+		amount = amount.Mul(decimal.NewFromFloat(1.1))
+	}
+
 	ant.assetsLock.Lock()
 	baseBalance := ant.assets[e.Base]
 	quoteBalance := ant.assets[e.Quote]
@@ -144,6 +149,7 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 			amount = quoteBalance
 		}
 	}
+	amount = amount.Round(AmountPrecision)
 
 	ant.orders[exchangeOrder] = false
 	_, err := OceanTrade(e.Category, e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder)
@@ -240,8 +246,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 
 						index := ant.OrderQueue.IndexOf(event)
 						updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}
-						//if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
-						if err := Database(ctx).Table("profit_events_test").Where("id=?", event.ID).Updates(updates).Error; err != nil {
+						if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
 							log.Println("update event error", err)
 						}
 						ant.OrderQueue.Remove(index)
@@ -386,10 +391,6 @@ func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote st
 
 	id := UuidWithString(ClientId + exchange.Price.String() + exchange.Amount.String() + category + Who(base) + Who(quote))
 	amount := exchange.Amount
-	//多付款，保证扣完手续费后能全买下
-	if category == PageSideBid {
-		exchange.Amount.Mul(decimal.NewFromFloat(1.1)).Round(8)
-	}
 	event := ProfitEvent{
 		ID:          id,
 		Category:    category,
