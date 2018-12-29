@@ -232,7 +232,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				go func(events []*ProfitEvent) {
 					select {
 					case <-time.After(3 * time.Second):
-						log.Println("size of queue before", ant.OrderQueue.Size())
+						log.Println("size of queue before", ant.OrderQueue.Size(), "-", len(expired))
 						for _, event := range events {
 							index := ant.OrderQueue.IndexOf(event)
 							updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}

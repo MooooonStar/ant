@@ -16,11 +16,10 @@ import (
 )
 
 var Wallet = map[string]float64{
-	BTC:  0.010,
+	BTC:  0.026,
 	EOS:  10,
 	ETH:  1,
 	USDT: 100,
-	XIN:  0.2,
 }
 
 func ReadAssets(ctx context.Context) (map[string]string, error) {
