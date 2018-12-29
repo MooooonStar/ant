@@ -47,7 +47,7 @@ func TestExinTrade(t *testing.T) {
 //201602a3-a0d2-439e-8e63-e1b6dec86b76
 func TestOceanCancel(t *testing.T) {
 	//OceanCore = F1exCore
-	err := OceanCancel("1a282e67-0ad8-3f86-a94c-2d1fdf871b01")
+	err := OceanCancel("7eae417b-e534-361d-a861-a541d27a9680")
 	fmt.Println(err, "")
 }
 

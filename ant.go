@@ -57,7 +57,7 @@ type Ant struct {
 	orders map[string]bool
 	//买单和卖单的红黑树，生成深度用
 	books      map[string]*OrderBook
-	orderQueue *arraylist.List
+	OrderQueue *arraylist.List
 	assetsLock sync.Mutex
 	assets     map[string]decimal.Decimal
 	client     *bot.BlazeClient
@@ -72,7 +72,7 @@ func NewAnt(ocean, exin bool) *Ant {
 		orders:      make(map[string]bool, 0),
 		books:       make(map[string]*OrderBook, 0),
 		assets:      make(map[string]decimal.Decimal, 0),
-		orderQueue:  arraylist.New(),
+		OrderQueue:  arraylist.New(),
 		client:      bot.NewBlazeClient(ClientId, SessionId, PrivateKey),
 	}
 }
@@ -99,7 +99,7 @@ func (ant *Ant) Clean() {
 		}
 	}
 	//TODO, event中baseAmount和quoteAmout的数量和预期不一致
-	for it := ant.orderQueue.Iterator(); it.Next(); {
+	for it := ant.OrderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
 		v, _ := prettyjson.Marshal(event)
 		log.Println("event:", string(v))
@@ -157,7 +157,7 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 		e.BaseAmount = e.BaseAmount.Sub(amount)
 	}
 	e.ExchangeOrder = exchangeOrder
-	ant.orderQueue.Add(e)
+	ant.OrderQueue.Add(e)
 
 	if err := Database(ctx).FirstOrCreate(e).Error; err != nil {
 		return err
@@ -190,7 +190,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			return ctx.Err()
 		case <-ticker.C:
 			expired := make([]*ProfitEvent, 0)
-			for it := ant.orderQueue.Iterator(); it.Next(); {
+			for it := ant.OrderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3 * time.Second).Before(time.Now()) {
 					expired = append(expired, event)
@@ -238,12 +238,13 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						v, _ := prettyjson.Marshal(event)
 						log.Println("expired event:", string(v))
 
-						index := ant.orderQueue.IndexOf(event)
+						index := ant.OrderQueue.IndexOf(event)
 						updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}
-						if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
+						//if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
+						if err := Database(ctx).Table("profit_events_test").Where("id=?", event.ID).Updates(updates).Error; err != nil {
 							log.Println("update event error", err)
 						}
-						ant.orderQueue.Remove(index)
+						ant.OrderQueue.Remove(index)
 					}
 				}
 			}(expired)
@@ -265,7 +266,7 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		if err := reply.Unpack(s.Data); err != nil {
 			return err
 		}
-		for it := ant.orderQueue.Iterator(); it.Next(); {
+		for it := ant.OrderQueue.Iterator(); it.Next(); {
 			event := it.Value().(*ProfitEvent)
 
 			if event.OtcOrder == reply.O.String() {
@@ -297,7 +298,7 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 			return err
 		}
 
-		for it := ant.orderQueue.Iterator(); it.Next(); {
+		for it := ant.OrderQueue.Iterator(); it.Next(); {
 			event := it.Value().(*ProfitEvent)
 			if event.ExchangeOrder == order.A.String() ||
 				event.ExchangeOrder == order.B.String() ||
