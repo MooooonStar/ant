@@ -84,10 +84,14 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+wutrcXgsEOXaKzrjqqodU+6FTpkNBTkNFTA=="
-	var action OceanTransfer
-	action.Unpack(match)
-	fmt.Println(action.A, action.B, action.O, action.S)
+	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+whQt0dGnLOEu7hpgPOrA6FqFTpkNBTkNFTA=="
+	var reply OceanReply
+	reply.Unpack(match)
+	fmt.Println(reply.A, reply.B, reply.O, reply.S)
+}
+
+func TestExinMemo(t *testing.T) {
+	ExinTradeMessager("buy", "2", EOS, USDT)
 }
 
 func TestExinReply(t *testing.T) {

@@ -157,11 +157,6 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 		return err
 	}
 
-	if e.Category == PageSideBid {
-		e.QuoteAmount = e.QuoteAmount.Sub(amount)
-	} else {
-		e.BaseAmount = e.BaseAmount.Sub(amount)
-	}
 	e.ExchangeOrder = exchangeOrder
 	ant.OrderQueue.Add(e)
 
@@ -227,11 +222,6 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 							continue
 						}
 						event.OtcOrder = otcOrder
-						if side == PageSideBid {
-							event.QuoteAmount = event.QuoteAmount.Sub(limited)
-						} else if side == PageSideAsk {
-							event.BaseAmount = event.BaseAmount.Sub(limited)
-						}
 					}
 					ant.orders[event.ExchangeOrder] = true
 				}
@@ -259,75 +249,39 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 
 func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 	amount, _ := decimal.NewFromString(s.Amount)
-	if amount.IsNegative() {
-		return nil
-	}
-
-	if s.OpponentId == ExinCore {
-		v, _ := prettyjson.Marshal(s)
-		log.Println("find  exin snapshot : ", string(v))
-
-		var reply ExinReply
-		if err := reply.Unpack(s.Data); err != nil {
-			return err
-		}
-		for it := ant.OrderQueue.Iterator(); it.Next(); {
-			event := it.Value().(*ProfitEvent)
-
-			if event.OtcOrder == reply.O.String() {
-				v, _ := prettyjson.Marshal(event)
-				log.Println("exin order  matched: ", string(v))
-
-				v0, _ := prettyjson.Marshal(event)
-				log.Println("event before : ", string(v0))
-
-				if s.AssetId == event.Base {
-					event.BaseAmount = event.BaseAmount.Add(amount)
-				} else if s.AssetId == event.Quote {
-					event.QuoteAmount = event.QuoteAmount.Add(amount)
-				}
-
-				v1, _ := prettyjson.Marshal(event)
-				log.Println("event after : ", string(v1))
-
+	matched := &ProfitEvent{}
+	for it := ant.OrderQueue.Iterator(); it.Next(); {
+		event := it.Value().(*ProfitEvent)
+		if s.OpponentId == ExinCore {
+			var reply ExinReply
+			if err := reply.Unpack(s.Data); err != nil {
+				return err
+			}
+			if event.OtcOrder == s.TraceId || event.OtcOrder == reply.O.String() {
+				matched = event
+				it.End()
+			}
+		} else {
+			var reply OceanReply
+			if err := reply.Unpack(s.Data); err != nil {
+				return err
+			}
+			if event.ExchangeOrder == s.TraceId || event.ExchangeOrder == reply.A.String() || event.ExchangeOrder == reply.B.String() || event.ExchangeOrder == reply.O.String() {
+				matched = event
 				it.End()
 			}
 		}
-		return nil
-	} else {
-		v, _ := prettyjson.Marshal(s)
-		log.Println("find  ocean snapshot : ", string(v))
-
-		var order OceanTransfer
-		if err := order.Unpack(s.Data); err != nil {
-			return err
-		}
-
-		for it := ant.OrderQueue.Iterator(); it.Next(); {
-			event := it.Value().(*ProfitEvent)
-			if event.ExchangeOrder == order.A.String() ||
-				event.ExchangeOrder == order.B.String() ||
-				event.ExchangeOrder == order.O.String() {
-
-				v, _ := prettyjson.Marshal(order)
-				log.Println("ocean order  matched : ", string(v))
-
-				v0, _ := prettyjson.Marshal(event)
-				log.Println("event before : ", string(v0))
-
-				if s.AssetId == event.Base {
-					event.BaseAmount = event.BaseAmount.Add(amount)
-				} else if s.AssetId == event.Quote {
-					event.QuoteAmount = event.QuoteAmount.Add(amount)
-				}
-				v1, _ := prettyjson.Marshal(event)
-				log.Println("event after : ", string(v1))
-
-				it.End()
-			}
-		}
-		return nil
 	}
+
+	v, _ := prettyjson.Marshal(matched)
+	log.Println("order matched", string(v))
+
+	if s.AssetId == matched.Base {
+		matched.BaseAmount = matched.BaseAmount.Add(amount)
+	} else if s.AssetId == matched.Quote {
+		matched.QuoteAmount = matched.QuoteAmount.Add(amount)
+	}
+	return nil
 }
 
 func (ant *Ant) Trade(ctx context.Context) error {
