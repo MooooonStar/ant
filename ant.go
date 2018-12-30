@@ -114,14 +114,11 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 	}
 
 	defer func() {
-		go func(trace string) {
-			select {
-			case <-time.After(time.Duration(OrderExpireTime)):
-				if err := OceanCancel(trace); err == nil {
-					ant.orders[exchangeOrder] = true
-				}
+		time.AfterFunc(time.Duration(OrderExpireTime), func() {
+			if err := OceanCancel(exchangeOrder); err == nil {
+				ant.orders[exchangeOrder] = true
 			}
-		}(exchangeOrder)
+		})
 
 		go ant.Notice(ctx, *e)
 	}()
@@ -150,7 +147,6 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 			amount = quoteBalance
 		}
 	}
-	amount = amount.Round(AmountPrecision)
 
 	ant.orders[exchangeOrder] = false
 	_, err := OceanTrade(e.Category, e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder)
@@ -191,11 +187,14 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			expired := make([]*ProfitEvent, 0)
+			removed := make([]*ProfitEvent, 0)
 			for it := ant.OrderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
+				if !event.BaseAmount.Mul(event.Price).Add(event.QuoteAmount).IsNegative() {
+					removed = append(removed, event)
+				}
+
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3 * time.Second).Before(time.Now()) {
-					expired = append(expired, event)
 					amount := event.BaseAmount
 					send, side := event.Base, PageSideAsk
 					if !amount.IsPositive() {
@@ -227,23 +226,17 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					ant.orders[event.ExchangeOrder] = true
 				}
 			}
-
-			if len(expired) > 0 {
-				go func(events []*ProfitEvent) {
-					select {
-					case <-time.After(3 * time.Second):
-						log.Println("size of queue before", ant.OrderQueue.Size(), "-", len(expired))
-						for _, event := range events {
-							index := ant.OrderQueue.IndexOf(event)
-							updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}
-							if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
-								log.Println("update event error", err)
-							}
-							ant.OrderQueue.Remove(index)
-						}
-						log.Println("size of queue after", ant.OrderQueue.Size())
+			if len(removed) > 0 {
+				for _, event := range removed {
+					index := ant.OrderQueue.IndexOf(event)
+					ant.OrderQueue.Remove(index)
+					updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}
+					if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
+						log.Println("update event error", err)
 					}
-				}(expired)
+					v, _ := prettyjson.Marshal(event)
+					log.Println("closed evven:", string(v))
+				}
 			}
 		}
 	}
@@ -281,9 +274,10 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		matched.QuoteAmount = matched.QuoteAmount.Add(amount)
 	}
 
-	v0, _ := prettyjson.Marshal(matched)
-	log.Println("after matched", string(v0))
-
+	if len(matched.Category) > 0 {
+		v0, _ := prettyjson.Marshal(matched)
+		log.Println("after matched", string(v0))
+	}
 	return nil
 }
 
