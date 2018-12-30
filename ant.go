@@ -190,10 +190,15 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			removed := make([]*ProfitEvent, 0)
 			for it := ant.OrderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
+				//获利了结或者未成交全退款的订单
 				if !event.BaseAmount.Mul(event.Price).Add(event.QuoteAmount).IsNegative() {
 					removed = append(removed, event)
 				}
-
+				//受exin限制无法成交的订单
+				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(1 * time.Minute).Before(time.Now()) {
+					removed = append(removed, event)
+				}
+				//每笔订单都会发起退款，这里留3s收退款
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3 * time.Second).Before(time.Now()) {
 					amount := event.BaseAmount
 					send, side := event.Base, PageSideAsk
@@ -235,7 +240,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						log.Println("update event error", err)
 					}
 					v, _ := prettyjson.Marshal(event)
-					log.Println("closed evven:", string(v))
+					log.Println("closed event:", string(v))
 				}
 			}
 		}
@@ -272,11 +277,6 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 		matched.BaseAmount = matched.BaseAmount.Add(amount)
 	} else if s.AssetId == matched.Quote {
 		matched.QuoteAmount = matched.QuoteAmount.Add(amount)
-	}
-
-	if len(matched.Category) > 0 {
-		v0, _ := prettyjson.Marshal(matched)
-		log.Println("after matched", string(v0))
 	}
 	return nil
 }
