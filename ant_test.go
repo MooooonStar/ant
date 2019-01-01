@@ -128,3 +128,7 @@ func TestSumAssets(t *testing.T) {
 
 	log.Println("sum", sum)
 }
+
+func TestReply(t *testing.T) {
+	log.Println(Reply("不好笑"))
+}
