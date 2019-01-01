@@ -78,7 +78,7 @@ func ExinTrade(side, amount, base, quote string, trace ...string) (string, error
 	}
 
 	precision := ExinAssetPrecision(send, get)
-	a := number.FromString(amount).Round(precision)
+	a := number.FromString(amount).RoundFloor(precision)
 
 	log.Printf("=============trade in exin, %s, send %s, get %s, trace: %s", a, Who(send), Who(get), traceId)
 	transfer := bot.TransferInput{

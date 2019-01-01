@@ -130,6 +130,7 @@ func main() {
 				db.AutoMigrate(&ant.ProfitEvent{})
 
 				redisClient := redis.NewClient(&redis.Options{
+					DB:           1,
 					Addr:         "127.0.0.1:6379",
 					ReadTimeout:  3 * time.Second,
 					WriteTimeout: 3 * time.Second,
