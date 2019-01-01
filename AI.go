@@ -4,19 +4,12 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
-)
-
-const (
-	Endpoint  = "http://openapi.tuling123.com/openapi/api/v2"
-	ApiKey    = "b5d84a707cc3490a960b4e8e5d237a37"
-	ApiSecret = "ca0f8d7a080371e3"
-	UserID    = "373693"
-	tlKey     = "a5052a22b8232be1e387ff153e823975"
 )
 
 func Encode(text string) string {
@@ -40,6 +33,7 @@ func Reply(msg string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+
 	bt, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
@@ -50,8 +44,13 @@ func Reply(msg string) (string, error) {
 		Text string `json:"text"`
 	}
 
-	err = json.Unmarshal(bt, &Data)
-	return Data.Text, err
+	if err = json.Unmarshal(bt, &Data); err != nil {
+		return "", err
+	}
+	if Data.Code != 100000 {
+		return "", errors.New("Something is wrong")
+	}
+	return Data.Text, nil
 }
 
 // func Reply(msg string) (string, error) {
