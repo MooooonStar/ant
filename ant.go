@@ -42,7 +42,7 @@ type ProfitEvent struct {
 }
 
 func (ProfitEvent) TableName() string {
-	return "profit_events"
+	return "ant_profit_events"
 }
 
 type Ant struct {

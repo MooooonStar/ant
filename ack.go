@@ -85,15 +85,8 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			reply, err := Reply(string(data))
 			if err != nil {
 				return ant.client.SendPlainText(ctx, msgView, "I am busy!!! Stop disturbing me.")
-			} else {
-				start := strings.Index(reply, "{br}")
-				end := strings.LastIndex(reply, "{br}")
-				content := strings.Replace(reply, "&quot;", "'", -1)
-				if start >= 0 && end < len(reply) {
-					content = strings.Replace(reply[start:end], "{br}", "\n", -1)
-				}
-				return ant.client.SendPlainText(ctx, msgView, content)
 			}
+			return ant.client.SendPlainText(ctx, msgView, reply)
 		}
 	}
 	return nil
