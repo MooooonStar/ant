@@ -9,10 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"MoooonStar/bot/ant"
-
 	"github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
+	"github.com/MooooonStar/ant"
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -108,7 +107,7 @@ func main() {
 					quoteSymbols = []string{quoteSymbol}
 				}
 
-				db, err := gorm.Open("mysql", "root:@/ant")
+				db, err := gorm.Open("mysql", "root:@/test")
 				if err != nil {
 					panic(err)
 				}
