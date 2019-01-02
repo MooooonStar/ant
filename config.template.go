@@ -3,6 +3,8 @@
 package ant
 
 const (
+	tlKey = ""
+
 	ClientId     = ""
 	ClientSecret = ""
 	PinCode      = ""
