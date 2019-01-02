@@ -63,7 +63,7 @@ func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, li
 
 func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 	const limit = 500
-	checkpoint := time.Now().Add(-20 * time.Minute).UTC()
+	checkpoint := time.Now().UTC()
 	for {
 		snapshots, err := ex.requestMixinNetwork(ctx, checkpoint, limit)
 		if err != nil {
