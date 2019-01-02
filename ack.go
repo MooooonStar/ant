@@ -80,7 +80,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			if err != nil {
 				return err
 			}
-			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("start:%.4f,end:%.4f,gain:%.4f", pre, now, now-pre))
+			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("start:%.4f,end:%.4f,gain:%.4f BTC", pre, now, now-pre))
 		default:
 			reply, err := Reply(string(data))
 			if err != nil {
