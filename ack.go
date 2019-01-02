@@ -71,16 +71,6 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			return ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back soon.")
 		case "help", "??":
 			return ant.client.SendPlainText(ctx, msgView, "Too young too simple. No help message.")
-		case "profit":
-			pre, err := SumAssetsInit(ctx)
-			if err != nil {
-				return err
-			}
-			now, err := SumAssetsNow(ctx)
-			if err != nil {
-				return err
-			}
-			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("start:%.4f,end:%.4f,gain:%.4f BTC", pre, now, now-pre))
 		default:
 			reply, err := Reply(string(data))
 			if err != nil {
