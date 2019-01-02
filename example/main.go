@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -16,7 +14,6 @@ import (
 	"github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/go-number"
 	"github.com/go-redis/redis"
-	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	uuid "github.com/satori/go.uuid"
@@ -44,8 +41,7 @@ func main() {
 				for asset, amount := range assets {
 					balance[ant.Who(asset)] = amount
 				}
-				v, _ := prettyjson.Marshal(balance)
-				fmt.Println(string(v))
+				log.Println(balance)
 				return nil
 			},
 		},
@@ -96,18 +92,8 @@ func main() {
 				cli.StringFlag{Name: "pair"},
 				cli.BoolFlag{Name: "ocean"},
 				cli.BoolFlag{Name: "exin"},
-				cli.BoolFlag{Name: "file"},
 			},
 			Action: func(c *cli.Context) error {
-				if tofile := c.Bool("file"); tofile {
-					file, err := os.OpenFile("/tmp/ant.log", os.O_WRONLY|os.O_APPEND, 0666)
-					if err != nil {
-						panic(err)
-					}
-					writer := io.MultiWriter(os.Stdout, file)
-					log.SetOutput(writer)
-				}
-
 				pair := c.String("pair")
 				ocean := c.Bool("ocean")
 				exin := c.Bool("exin")

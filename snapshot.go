@@ -99,9 +99,6 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
-	// v, _ := prettyjson.Marshal(s)
-	// log.Println("find snapshot", string(v))
-
 	if err := ex.HandleSnapshot(ctx, s); err != nil {
 		log.Println(err)
 		return err

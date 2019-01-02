@@ -11,7 +11,6 @@ import (
 
 	"github.com/MixinNetwork/bot-api-go-client"
 	"github.com/emirpasic/gods/lists/arraylist"
-	"github.com/hokaccha/go-prettyjson"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 )
@@ -100,11 +99,6 @@ func (ant *Ant) Clean() {
 	}
 	//TODO, event中baseAmount和quoteAmout的数量和预期不一致
 	log.Println("+++exit because ctrl-c++++")
-	for it := ant.OrderQueue.Iterator(); it.Next(); {
-		event := it.Value().(*ProfitEvent)
-		v, _ := prettyjson.Marshal(event)
-		log.Println("event:", string(v))
-	}
 }
 
 func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
@@ -239,8 +233,6 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
 						log.Println("update event error", err)
 					}
-					v, _ := prettyjson.Marshal(event)
-					log.Println("closed event:", string(v))
 				}
 			}
 		}

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
-	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/shopspring/decimal"
 )
 
@@ -123,9 +122,6 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 	if resp.Error != "" {
 		return "", errors.New(resp.Error)
 	}
-
-	v, _ := prettyjson.Marshal(resp.Data)
-	fmt.Println("snapshot info:", string(v))
 
 	return resp.Data.TraceId, nil
 }
