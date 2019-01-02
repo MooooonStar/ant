@@ -9,3 +9,6 @@
 
    进入demo目录，go build -o ant 编译，然后输入 ./ant run --ocean --exin 运行即可,需提供mysql和redis环境支持。
 向机器人发送sub订阅，unsub取消订阅，其他看机器人心情回复。若行情过于无聊，无任何消息推送，欢迎去Ocean ONE上挂单。
+
+### 注意
+   代码中删除了去Ocean ONE和ExinOne上交易以及AI的代码，请参考各自的文档自行实现。
