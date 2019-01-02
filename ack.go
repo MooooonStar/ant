@@ -69,7 +69,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				return err
 			}
 			return ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back soon.")
-		case "help", "帮助":
+		case "help", "??":
 			return ant.client.SendPlainText(ctx, msgView, "Too young too simple. No help message.")
 		case "profit":
 			pre, err := SumAssetsInit(ctx)

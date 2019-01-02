@@ -9,13 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MixinNetwork/bot-api-go-client"
-	"github.com/MixinNetwork/go-number"
 	"github.com/MooooonStar/ant"
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	uuid "github.com/satori/go.uuid"
 	"github.com/urfave/cli"
 )
 
@@ -28,62 +25,6 @@ func main() {
 
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
-		{
-			Name:  "balance",
-			Usage: "show balance",
-			Action: func(c *cli.Context) error {
-				assets, err := ant.ReadAssets(context.TODO())
-				if err != nil {
-					return err
-				}
-				balance := make(map[string]string, 0)
-				for asset, amount := range assets {
-					balance[ant.Who(asset)] = amount
-				}
-				log.Println(balance)
-				return nil
-			},
-		},
-		{
-			Name:  "clear",
-			Usage: "clear all assets",
-			Flags: []cli.Flag{
-				cli.StringFlag{Name: "symbol,s"},
-			},
-			Action: func(c *cli.Context) error {
-				symbol := strings.ToUpper(c.String("symbol"))
-				assets, err := ant.ReadAssets(context.TODO())
-				if err != nil {
-					return err
-				}
-				if symbol == "ALL" {
-					for asset, balance := range assets {
-						if asset == ant.CNB {
-							continue
-						}
-						in := bot.TransferInput{
-							AssetId:     asset,
-							RecipientId: "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909",
-							Amount:      number.FromString(balance),
-							TraceId:     uuid.Must(uuid.NewV4()).String(),
-							Memo:        "master, give you the money",
-						}
-						bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
-					}
-					return nil
-				} else {
-					asset := ant.GetAssetId(symbol)
-					in := bot.TransferInput{
-						AssetId:     asset,
-						RecipientId: "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909",
-						Amount:      number.FromString(assets[asset]),
-						TraceId:     uuid.Must(uuid.NewV4()).String(),
-						Memo:        "master, give you the money",
-					}
-					return bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
-				}
-			},
-		},
 		{
 			Name:  "run",
 			Usage: "find profits between different exchanges",

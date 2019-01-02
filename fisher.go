@@ -18,6 +18,7 @@ type Trade struct {
 	CreateAt string `json:"created_at"`
 }
 
+//根据5min内的交易记录判断有无搬砖机会
 func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 	orders := make(map[string]bool, 0)
 	ticker := time.NewTicker(1 * time.Second)

@@ -173,6 +173,7 @@ func LimitAmount(amount, balance, min, max decimal.Decimal) decimal.Decimal {
 	return amount
 }
 
+//订单有效期过后3s去exin上进行交易
 func (ant *Ant) OnExpire(ctx context.Context) error {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -184,7 +185,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			removed := make([]*ProfitEvent, 0)
 			for it := ant.OrderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
-				//获利了结或者未成交全退款的订单
+				//获利了结或者未成交全部取消的订单
 				if !event.BaseAmount.Mul(event.Price).Add(event.QuoteAmount).IsNegative() {
 					removed = append(removed, event)
 				}
@@ -192,7 +193,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(1 * time.Minute).Before(time.Now()) {
 					removed = append(removed, event)
 				}
-				//每笔订单都会发起退款，这里留3s收退款
+				//每笔订单最后都会取消，这里留3s收退款
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3 * time.Second).Before(time.Now()) {
 					amount := event.BaseAmount
 					send, side := event.Base, PageSideAsk
@@ -289,6 +290,7 @@ func (ant *Ant) Trade(ctx context.Context) error {
 	}
 }
 
+//根据深度判断有无搬砖机会
 func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 	for {
 		select {
@@ -312,6 +314,7 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 	}
 }
 
+//判断有无获利机会
 func (ant *Ant) Inspect(ctx context.Context, exchange, otc Order, base, quote string, side string, expire int64) {
 	var category string
 	if side == PageSideBid {
