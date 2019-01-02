@@ -107,7 +107,7 @@ func main() {
 					quoteSymbols = []string{quoteSymbol}
 				}
 
-				db, err := gorm.Open("mysql", "root:@/test")
+				db, err := gorm.Open("mysql", "root:@/test?parseTime=true")
 				if err != nil {
 					panic(err)
 				}

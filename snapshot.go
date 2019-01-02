@@ -8,6 +8,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/hokaccha/go-prettyjson"
+
 	bot "github.com/MixinNetwork/bot-api-go-client"
 )
 
@@ -61,7 +63,7 @@ func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, li
 
 func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 	const limit = 500
-	checkpoint := time.Now().UTC()
+	checkpoint := time.Now().Add(-20 * time.Minute).UTC()
 	for {
 		snapshots, err := ex.requestMixinNetwork(ctx, checkpoint, limit)
 		if err != nil {
@@ -98,6 +100,9 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	if len(s.OpponentId) == 0 || s.Asset.AssetId == CNB {
 		return nil
 	}
+
+	v, _ := prettyjson.Marshal(s)
+	log.Println("find snapshot:", string(v))
 
 	if err := ex.HandleSnapshot(ctx, s); err != nil {
 		log.Println(err)
