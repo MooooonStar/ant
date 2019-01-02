@@ -1,5 +1,3 @@
-//+build template
-
 package ant
 
 const (

@@ -1,2 +1,3 @@
-config.go
+config.dev.go
 *.png
+demo/config.dev.go

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	SubcribedUser = "subcriberd_user"
+	SubcribedUser = "ant_subcriberd_user"
 	OceanWebsite  = "https://mixcoin.one"
 	ExinWebsite   = "https://exinone.com/#/exchange/flash/flashTakeOrder?uuid=%d"
 )
