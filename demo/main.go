@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -106,8 +107,9 @@ func main() {
 					baseSymbols = []string{baseSymbol}
 					quoteSymbols = []string{quoteSymbol}
 				}
-
-				db, err := gorm.Open("mysql", "root:@/test?parseTime=true")
+				conf := fmt.Sprintf("%s:%s@%s(%s)/%s?parseTime=True&charset=utf8mb4",
+					DBUsername, DBPassword, "tcp", DBHost, DBName)
+				db, err := gorm.Open("mysql", conf)
 				if err != nil {
 					panic(err)
 				}
@@ -115,8 +117,8 @@ func main() {
 				db.AutoMigrate(&ant.ProfitEvent{})
 
 				redisClient := redis.NewClient(&redis.Options{
-					DB:           1,
-					Addr:         "127.0.0.1:6379",
+					DB:           RedisDB,
+					Addr:         RedisAddress,
 					ReadTimeout:  3 * time.Second,
 					WriteTimeout: 3 * time.Second,
 					PoolTimeout:  4 * time.Second,
