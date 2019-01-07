@@ -19,5 +19,6 @@
    1. 向机器人订阅搬砖行情 sub
    2. 退订 unsub
    3. 聊天 上海天气如何？
+   4. 接收行情信息， 去Ocean ONE或ExinOne上交易
    
    ![image](./demo/demo.jpeg)
