@@ -14,7 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var checkpoint = time.Now()
+var checkpoint = time.Now().Add(-5 * time.Minute)
 
 const (
 	snow = "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909"
