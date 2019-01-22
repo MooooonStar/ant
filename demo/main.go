@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MixinNetwork/bot-api-go-client"
-	"github.com/MixinNetwork/go-number"
+	bot "github.com/MixinNetwork/bot-api-go-client"
+	number "github.com/MixinNetwork/go-number"
 	"github.com/MooooonStar/ant"
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
@@ -20,8 +20,8 @@ import (
 	"github.com/urfave/cli"
 )
 
-var baseSymbols = []string{"BTC", "EOS", "ETH", "XIN"}
-var quoteSymbols = []string{"BTC", "USDT"}
+var baseSymbols = []string{"EOS", "ETH"}
+var quoteSymbols = []string{"XIN"}
 
 func main() {
 	sig := make(chan os.Signal, 1)

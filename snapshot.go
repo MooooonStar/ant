@@ -8,9 +8,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
-
 	bot "github.com/MixinNetwork/bot-api-go-client"
+	prettyjson "github.com/hokaccha/go-prettyjson"
 )
 
 const (

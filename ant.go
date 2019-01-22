@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MixinNetwork/bot-api-go-client"
+	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/emirpasic/gods/lists/arraylist"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"

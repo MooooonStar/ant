@@ -14,9 +14,9 @@ import (
 
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetExinDepth(ctx, XIN, BTC)
+	data, _ := GetExinDepth(ctx, EOS, XIN)
 	v, _ := prettyjson.Marshal(&data)
-	fmt.Println(string(v))
+	fmt.Println("0-", string(v))
 }
 
 func TestExinOrder(t *testing.T) {
