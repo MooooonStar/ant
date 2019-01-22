@@ -14,11 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var Wallet = map[string]float64{
-	EOS: 9,
-	ETH: 0.1,
-	XIN: 0.1,
-}
+var checkpoint = time.Now().Add(-10 * time.Minute)
 
 func ReadAssets(ctx context.Context) (map[string]string, error) {
 	uri := "/assets"
@@ -150,10 +146,25 @@ func SumAssetsInit(ctx context.Context) (float64, error) {
 		return 0, err
 	}
 
-	sum := Wallet[BTC]
-	for asset, amount := range Wallet {
+	var wallets []struct {
+		Asset  string
+		Amount float64
+	}
+
+	db := Database(ctx).Model(&Snapshot{}).Where("created_at > ?", checkpoint).Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
+	if db.Error != nil {
+		return 0.0, err
+	}
+
+	sum := 0.0
+	for _, w := range wallets {
+		asset, amount := w.Asset, w.Amount
 		price, _ := strconv.ParseFloat(prices[asset], 64)
-		sum += price * amount
+		if asset != BTC {
+			sum += price * amount
+		} else {
+			sum += amount
+		}
 	}
 
 	return sum, nil

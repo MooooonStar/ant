@@ -1,3 +1,5 @@
 *.png
 demo/config.dev.go
-config.go
+config*.go
+demo/demo
+demo/ant

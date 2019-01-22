@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"testing"
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
@@ -112,22 +111,22 @@ func TestReadAssets(t *testing.T) {
 	fmt.Println(string(v))
 }
 
-func TestSumAssets(t *testing.T) {
-	prices, err := GetExinPrices(context.Background(), BTC)
-	if err != nil {
-		panic(err)
-	}
+// func TestSumAssets(t *testing.T) {
+// 	prices, err := GetExinPrices(context.Background(), BTC)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	log.Println("prices", prices)
+// 	log.Println("prices", prices)
 
-	sum := 0.0
-	for asset, amount := range Wallet {
-		price, _ := strconv.ParseFloat(prices[asset], 64)
-		sum += price * amount
-	}
+// 	sum := 0.0
+// 	for asset, amount := range Wallet {
+// 		price, _ := strconv.ParseFloat(prices[asset], 64)
+// 		sum += price * amount
+// 	}
 
-	log.Println("sum", sum)
-}
+// 	log.Println("sum", sum)
+// }
 
 func TestReply(t *testing.T) {
 	log.Println(Reply("不好笑"))

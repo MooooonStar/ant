@@ -3,12 +3,11 @@
 package ant
 
 const (
-	tlKey = ""
-
 	ClientId     = ""
 	ClientSecret = ""
 	PinCode      = ""
 	SessionId    = ""
 	PinToken     = ""
-	PrivateKey   = ``
+	//Note : delete the blank before each line
+	PrivateKey = ``
 )
