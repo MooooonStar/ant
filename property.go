@@ -14,7 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var checkpoint = time.Now().Add(-10 * time.Minute)
+var checkpoint = time.Now()
 
 func ReadAssets(ctx context.Context) (map[string]string, error) {
 	uri := "/assets"
