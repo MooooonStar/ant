@@ -16,6 +16,10 @@ import (
 
 var checkpoint = time.Now()
 
+const (
+	snow = "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909"
+)
+
 func ReadAssets(ctx context.Context) (map[string]string, error) {
 	uri := "/assets"
 	token, err := bot.SignAuthenticationToken(ClientId, SessionId, PrivateKey, "GET", uri, "")
@@ -151,7 +155,8 @@ func SumAssetsInit(ctx context.Context) (float64, error) {
 		Amount float64
 	}
 
-	db := Database(ctx).Model(&Snapshot{}).Where("created_at > ?", checkpoint).Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
+	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at >= ?", snow, checkpoint).
+		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
 	if db.Error != nil {
 		return 0.0, err
 	}
