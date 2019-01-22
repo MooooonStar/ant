@@ -20,8 +20,16 @@ import (
 	"github.com/urfave/cli"
 )
 
-var baseSymbols = []string{"EOS", "ETH"}
-var quoteSymbols = []string{"XIN"}
+type Pair struct {
+	Base  string
+	Quote string
+}
+
+var watchingList = []Pair{
+	Pair{ant.XIN, ant.BTC},
+	Pair{ant.EOS, ant.XIN},
+	Pair{ant.ETH, ant.XIN},
+}
 
 func main() {
 	sig := make(chan os.Signal, 1)
@@ -94,19 +102,9 @@ func main() {
 				cli.BoolFlag{Name: "exin"},
 			},
 			Action: func(c *cli.Context) error {
-				pair := c.String("pair")
 				ocean := c.Bool("ocean")
 				exin := c.Bool("exin")
-				symbols := strings.Split(pair, "/")
-				var baseSymbol, quoteSymbol string
-				if len(symbols) == 2 {
-					baseSymbol, quoteSymbol = symbols[0], symbols[1]
-				}
 
-				if len(baseSymbol) > 0 && len(quoteSymbol) > 0 {
-					baseSymbols = []string{baseSymbol}
-					quoteSymbols = []string{quoteSymbol}
-				}
 				conf := fmt.Sprintf("%s:%s@%s(%s)/%s?parseTime=True&charset=utf8mb4",
 					DBUsername, DBPassword, "tcp", DBHost, DBName)
 				db, err := gorm.Open("mysql", conf)
@@ -134,20 +132,14 @@ func main() {
 				go bot.PollMixinNetwork(ctx)
 				go bot.PollMixinMessage(ctx)
 				go bot.UpdateBalance(ctx)
-				for _, baseSymbol := range baseSymbols {
-					for _, quoteSymbol := range quoteSymbols {
-						base := ant.GetAssetId(strings.ToUpper(baseSymbol))
-						quote := ant.GetAssetId(strings.ToUpper(quoteSymbol))
-						if base == quote {
-							continue
-						}
 
-						client := ant.NewClient(ctx, base, quote, bot.OnOrderMessage(base, quote))
-						go client.PollOceanMessage(ctx)
+				for _, pair := range watchingList {
+					base, quote := pair.Base, pair.Quote
+					client := ant.NewClient(ctx, base, quote, bot.OnOrderMessage(base, quote))
+					go client.PollOceanMessage(ctx)
 
-						go bot.Watching(ctx, base, quote)
-						go bot.Fishing(ctx, base, quote)
-					}
+					go bot.Watching(ctx, base, quote)
+					go bot.Fishing(ctx, base, quote)
 				}
 				go bot.Trade(ctx)
 

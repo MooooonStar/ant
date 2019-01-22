@@ -122,11 +122,8 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 		return nil
 	}
 
-	amount := e.Amount
-	//多付款，保证扣完手续费后能全买下
-	if e.Category == PageSideBid {
-		amount = amount.Mul(decimal.NewFromFloat(1.1))
-	}
+	//多付款，保证扣完手续费后能清空挂单
+	amount := e.Amount.Mul(decimal.NewFromFloat(1.1))
 
 	ant.assetsLock.Lock()
 	baseBalance := ant.assets[e.Base]
