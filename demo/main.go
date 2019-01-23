@@ -41,13 +41,13 @@ func main() {
 			Name:  "balance",
 			Usage: "show balance",
 			Action: func(c *cli.Context) error {
-				assets, err := ant.ReadAssets(context.TODO())
+				assets, _, err := ant.ReadAssets(context.TODO())
 				if err != nil {
 					return err
 				}
 				balance := make(map[string]string, 0)
-				for asset, amount := range assets {
-					balance[ant.Who(asset)] = amount
+				for symbol, amount := range assets {
+					balance[symbol] = amount
 				}
 				log.Println(balance)
 				return nil
@@ -61,23 +61,26 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				symbol := strings.ToUpper(c.String("symbol"))
-				assets, err := ant.ReadAssets(context.TODO())
+				assets, _, err := ant.ReadAssets(context.TODO())
 				if err != nil {
 					return err
 				}
 				if symbol == "ALL" {
-					for asset, balance := range assets {
-						if asset == ant.CNB {
+					for symbol, balance := range assets {
+						if symbol == "CNB" {
 							continue
 						}
 						in := bot.TransferInput{
-							AssetId:     asset,
+							AssetId:     ant.GetAssetId(symbol),
 							RecipientId: "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909",
 							Amount:      number.FromString(balance),
 							TraceId:     uuid.Must(uuid.NewV4()).String(),
 							Memo:        "master, give you the money",
 						}
-						bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
+						err := bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
+						if err != nil {
+							log.Println("clear money error ", err)
+						}
 					}
 					return nil
 				} else {
@@ -89,7 +92,11 @@ func main() {
 						TraceId:     uuid.Must(uuid.NewV4()).String(),
 						Memo:        "master, give you the money",
 					}
-					return bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
+					err := bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
+					if err != nil {
+						log.Println("clear money error ", err)
+					}
+					return err
 				}
 			},
 		},

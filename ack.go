@@ -43,14 +43,14 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 		log.Println("I got a message, it said: ", string(data))
 		switch strings.ToLower(string(data)) {
 		case "whoisyourdaddy":
-			assets, err := ReadAssets(ctx)
+			assets, _, err := ReadAssets(ctx)
 			if err != nil {
 				return err
 			}
 			out := make(map[string]string, 0)
-			for asset, balance := range assets {
+			for symbol, balance := range assets {
 				if amount, _ := strconv.ParseFloat(balance, 64); amount > 0.0 {
-					out[Who(asset)] = balance
+					out[symbol] = balance
 				}
 			}
 			bt, err := json.Marshal(out)
@@ -74,15 +74,28 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 		case "help", "帮助":
 			return ant.client.SendPlainText(ctx, msgView, "Too young too simple. No help message.")
 		case "profit":
-			pre, err := SumAssetsInit(ctx)
+			pre, err := ReadAssetsInit(ctx)
 			if err != nil {
 				return err
 			}
-			now, err := SumAssetsNow(ctx)
+			now, prices, err := ReadAssets(ctx)
 			if err != nil {
 				return err
 			}
-			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("start:%.4f,end:%.4f,gain:%.4f BTC", pre, now, now-pre))
+
+			sum := 0.0
+			s := ""
+			for symbol, amount := range now {
+				if symbol == "CNB" {
+					continue
+				}
+				a, _ := strconv.ParseFloat(amount, 64)
+				b, _ := strconv.ParseFloat(pre[symbol], 64)
+				c, _ := strconv.ParseFloat(prices[symbol], 64)
+				sum += (a - b) * c
+				s += fmt.Sprintf("%5s:%10.4f%10.4f%10.4f\n", symbol, b, a, a-b)
+			}
+			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("%s Total:%8f USD", s, sum))
 		default:
 			reply, err := Reply(string(data))
 			if err != nil {

@@ -106,7 +106,7 @@ func TestExinReply(t *testing.T) {
 }
 
 func TestReadAssets(t *testing.T) {
-	data, _ := ReadAssets(context.TODO())
+	data, _, _ := ReadAssets(context.TODO())
 	v, _ := prettyjson.Marshal(data)
 	fmt.Println(string(v))
 }

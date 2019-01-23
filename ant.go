@@ -361,7 +361,7 @@ func (ant *Ant) UpdateBalance(ctx context.Context) error {
 	defer ticker.Stop()
 
 	update := func() {
-		assets, err := ReadAssets(ctx)
+		assets, _, err := ReadAssets(ctx)
 		if err != nil {
 			return
 		}

@@ -4,89 +4,75 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strconv"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/shopspring/decimal"
 )
 
-var checkpoint = time.Now()
+var checkpoint, _ = time.Parse(time.RFC3339Nano, "2006-01-02T15:04:05.999999999Z07:00")
 
 const (
 	snow = "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909"
 )
 
-func ReadAssets(ctx context.Context) (map[string]string, error) {
+func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
+	var wallets []struct {
+		Asset  string
+		Amount string
+	}
+
+	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at >= ?", snow, checkpoint).
+		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
+	if db.Error != nil {
+		return nil, db.Error
+	}
+
+	start := make(map[string]string, 0)
+	for _, wallet := range wallets {
+		symbol := Who(wallet.Asset)
+		start[symbol] = wallet.Amount
+	}
+	return start, nil
+}
+
+func ReadAssets(ctx context.Context) (map[string]string, map[string]string, error) {
 	uri := "/assets"
 	token, err := bot.SignAuthenticationToken(ClientId, SessionId, PrivateKey, "GET", uri, "")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	body, err := bot.Request(ctx, "GET", uri, nil, token)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var resp struct {
 		Data []struct {
-			AssetId string `json:"asset_id"`
-			Balance string `json:"balance"`
+			Symbol   string `json:"symbol"`
+			Balance  string `json:"balance"`
+			PriceUsd string `json:"price_usd"`
 		} `json:"data"`
 		Error string `json:"error"`
 	}
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if resp.Error != "" {
-		return nil, errors.New(resp.Error)
+		return nil, nil, errors.New(resp.Error)
 	}
 
+	prices := make(map[string]string, 0)
 	assets := make(map[string]string, 0)
 	for _, item := range resp.Data {
-		assets[item.AssetId] = item.Balance
+		balance, _ := decimal.NewFromString(item.Balance)
+		if balance.IsZero() {
+			continue
+		}
+		assets[item.Symbol] = item.Balance
+		prices[item.Symbol] = item.PriceUsd
 	}
-	return assets, nil
-}
-
-func GetExinPrices(ctx context.Context, quote string) (map[string]string, error) {
-	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?&base_asset=%s", quote)
-	client := http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var response struct {
-		Data map[string]Ticker `json:"data"`
-	}
-
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		return nil, err
-	}
-	prices := make(map[string]string, 0)
-	for _, v := range response.Data {
-		prices[v.Base] = v.Price
-	}
-	return prices, nil
+	return assets, prices, nil
 }
 
 func ReadSnapshot(ctx context.Context, id string) (string, error) {
@@ -124,53 +110,34 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 	return resp.Data.TraceId, nil
 }
 
-func SumAssetsNow(ctx context.Context) (float64, error) {
-	prices, err := GetExinPrices(ctx, BTC)
-	if err != nil {
-		return 0, err
-	}
-	assets, err := ReadAssets(ctx)
-	if err != nil {
-		return 0, err
-	}
+// func ReadAssets(ctx context.Context) (map[string]string, error) {
+// 	uri := "/assets"
+// 	token, err := bot.SignAuthenticationToken(ClientId, SessionId, PrivateKey, "GET", uri, "")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	body, err := bot.Request(ctx, "GET", uri, nil, token)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var resp struct {
+// 		Data []struct {
+// 			AssetId string `json:"asset_id"`
+// 			Balance string `json:"balance"`
+// 		} `json:"data"`
+// 		Error string `json:"error"`
+// 	}
+// 	err = json.Unmarshal(body, &resp)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if resp.Error != "" {
+// 		return nil, errors.New(resp.Error)
+// 	}
 
-	sum, _ := decimal.NewFromString(assets[BTC])
-	for asset, balance := range assets {
-		price, _ := decimal.NewFromString(prices[asset])
-		amount, _ := decimal.NewFromString(balance)
-		sum = sum.Add(price.Mul(amount))
-	}
-	s, _ := sum.Float64()
-	return s, nil
-}
-
-func SumAssetsInit(ctx context.Context) (float64, error) {
-	prices, err := GetExinPrices(ctx, BTC)
-	if err != nil {
-		return 0, err
-	}
-
-	var wallets []struct {
-		Asset  string
-		Amount float64
-	}
-
-	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at >= ?", snow, checkpoint).
-		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
-	if db.Error != nil {
-		return 0.0, err
-	}
-
-	sum := 0.0
-	for _, w := range wallets {
-		asset, amount := w.Asset, w.Amount
-		price, _ := strconv.ParseFloat(prices[asset], 64)
-		if asset != BTC {
-			sum += price * amount
-		} else {
-			sum += amount
-		}
-	}
-
-	return sum, nil
-}
+// 	assets := make(map[string]string, 0)
+// 	for _, item := range resp.Data {
+// 		assets[item.AssetId] = item.Balance
+// 	}
+// 	return assets, nil
+// }
