@@ -365,7 +365,8 @@ func (ant *Ant) UpdateBalance(ctx context.Context) error {
 		if err != nil {
 			return
 		}
-		for asset, balance := range assets {
+		for symbol, balance := range assets {
+			asset := GetAssetId(symbol)
 			b, err := decimal.NewFromString(balance)
 			if err == nil && !b.Equal(ant.assets[asset]) {
 				ant.assetsLock.Lock()
