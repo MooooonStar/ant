@@ -75,7 +75,7 @@ func main() {
 							RecipientId: "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909",
 							Amount:      number.FromString(balance),
 							TraceId:     uuid.Must(uuid.NewV4()).String(),
-							Memo:        "master, give you the money",
+							Memo:        ant.MagicWord,
 						}
 						err := bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
 						if err != nil {
@@ -90,7 +90,7 @@ func main() {
 						RecipientId: "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909",
 						Amount:      number.FromString(assets[asset]),
 						TraceId:     uuid.Must(uuid.NewV4()).String(),
-						Memo:        "master, give you the money",
+						Memo:        ant.MagicWord,
 					}
 					err := bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
 					if err != nil {

@@ -83,19 +83,26 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				return err
 			}
 
-			sum := 0.0
-			s := ""
+			//sum := 0.0
+			sum := decimal.Zero
+			s := fmt.Sprintf("%5s:%8v%8v%8v\n", "Symbol", "Before", "Now", "Delta")
 			for symbol, amount := range now {
 				if symbol == "CNB" {
 					continue
 				}
-				a, _ := strconv.ParseFloat(amount, 64)
-				b, _ := strconv.ParseFloat(pre[symbol], 64)
-				c, _ := strconv.ParseFloat(prices[symbol], 64)
-				sum += (a - b) * c
-				s += fmt.Sprintf("%5s:%10.4f%10.4f%10.4f\n", symbol, b, a, a-b)
+				// a, _ := strconv.ParseFloat(amount, 64)
+				// b, _ := strconv.ParseFloat(pre[symbol], 64)
+				// c, _ := strconv.ParseFloat(prices[symbol], 64)
+				// sum += (a - b) * c
+				a, _ := decimal.NewFromString(amount)
+				b, _ := decimal.NewFromString(pre[symbol])
+				c, _ := decimal.NewFromString(prices[symbol])
+				sum = sum.Add(a.Sub(b).Mul(c))
+				//s += fmt.Sprintf("%5s:%10.4f%10.4f%10.4f\n", symbol, b, a, a-b)
+				s += fmt.Sprintf("%5s:%8v%8v%8v\n", symbol, b.Round(4), a.Round(4), a.Sub(b).Round(4))
+				fmt.Println(s, "-", sum)
 			}
-			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("%s Total:%8f USD", s, sum))
+			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("%s  Total:  %8v USD", s, sum.Round(4)))
 		default:
 			reply, err := Reply(string(data))
 			if err != nil {
