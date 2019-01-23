@@ -11,7 +11,7 @@ import (
 
 const (
 	snow      = "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909"
-	MagicWord = "life is hard"
+	MagicWord = "666"
 )
 
 func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
