@@ -40,8 +40,8 @@ type ProfitEvent struct {
 	Amount        decimal.Decimal `json:"amount"           gorm:"type:varchar(36)"`
 	Min           decimal.Decimal `json:"min"              gorm:"type:varchar(36)"`
 	Max           decimal.Decimal `json:"max"              gorm:"type:varchar(36)"`
-	Base          string          `json:"base"             gorm:"type:varchar(36)"`
-	Quote         string          `json:"quote"            gorm:"type:varchar(36)"`
+	Base          string          `json:"base"             gorm:"type:varchar(36);INDEX"`
+	Quote         string          `json:"quote"            gorm:"type:varchar(36);INDEX"`
 	Expire        int64           `json:"expire"           gorm:"type:bigint(36)"`
 	BaseAmount    decimal.Decimal `json:"base_amount"      gorm:"type:varchar(36)"`
 	QuoteAmount   decimal.Decimal `json:"quote_amount"     gorm:"type:varchar(36)"`
@@ -266,7 +266,7 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 			return ctx.Err()
 		case <-ticker.C:
 			checkpoint := time.Now()
-			if err := Database(ctx).Model(&ProfitEvent{}).Where("created_at > ? AND created_at < ? AND status = ?", StartTime, checkpoint, StatusFailed).
+			if err := Database(ctx).Model(&ProfitEvent{}).Where("created_at < ? AND status = ?", checkpoint, StatusFailed).
 				Select("base, quote, SUM(base_amount) AS base_amount, SUM(quote_amount) AS quote_amount").
 				Group("base, quote").Scan(&mess).Error; err != nil {
 				continue
@@ -292,8 +292,9 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 				} else if side == PageSideBid {
 					limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
 				}
-				if _, err := ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err != nil {
-					log.Println("trade in exin error", err)
+				if _, err := ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err == nil {
+					Database(ctx).Model(&ProfitEvent{}).Where("status = ? AND base = ? AND quote = ?", StatusFailed, m.Base, m.Quote).
+						Update(ProfitEvent{Status: StatusDone, OtcOrder: trace})
 				}
 			}
 		}
