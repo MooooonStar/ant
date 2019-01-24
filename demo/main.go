@@ -88,7 +88,7 @@ func main() {
 					in := bot.TransferInput{
 						AssetId:     asset,
 						RecipientId: ant.MasterID,
-						Amount:      number.FromString(assets[asset]),
+						Amount:      number.FromString(assets[symbol]),
 						TraceId:     uuid.Must(uuid.NewV4()).String(),
 						Memo:        "long live the bitcoin",
 					}
