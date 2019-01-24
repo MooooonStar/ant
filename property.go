@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	in, _      = time.LoadLocation("Asia/Chongqing")
-	checkpoint = time.Date(2019, 1, 24, 8, 15, 0, 0, in)
+	in, _     = time.LoadLocation("Asia/Chongqing")
+	StartTime = time.Date(2019, 1, 24, 12, 0, 0, 0, in)
 )
 
 //var checkpoint, _ = time.Parse(time.RFC3339Nano, "2019-01-24T00:00:00.999999999Z00:00")
@@ -22,7 +22,7 @@ func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
 		Amount string
 	}
 
-	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", MasterID, checkpoint).
+	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", MasterID, StartTime).
 		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
 	if db.Error != nil {
 		return nil, db.Error

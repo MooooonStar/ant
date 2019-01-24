@@ -20,10 +20,20 @@ const (
 	OceanFee        = 0.001
 	ExinFee         = 0.003
 	OrderExpireTime = int64(5 * time.Second)
+
+	//Ocean One上订单未成交
+	StatusPending = "Pending"
+	//OceanOne上订单成交但Exin上未成交，最有可能是受Exin最小数量限制
+	StatusFailed = "Failed"
+	//订单未成交，全部退款或者搬砖成功
+	StatusSuccess = "Success"
+	//状态为Failed的订单，会累计到一定数量后集中去exin上处理
+	StatusDone = "Done"
 )
 
 type ProfitEvent struct {
 	ID            string          `json:"-"                gorm:"type:varchar(36);primary_key"`
+	CreatedAt     time.Time       `json:"created_at"`
 	Category      string          `json:"category"         gorm:"type:varchar(10)"`
 	Price         decimal.Decimal `json:"price"            gorm:"type:varchar(36)"`
 	Profit        decimal.Decimal `json:"profit"           gorm:"type:varchar(36)"`
@@ -32,12 +42,12 @@ type ProfitEvent struct {
 	Max           decimal.Decimal `json:"max"              gorm:"type:varchar(36)"`
 	Base          string          `json:"base"             gorm:"type:varchar(36)"`
 	Quote         string          `json:"quote"            gorm:"type:varchar(36)"`
-	CreatedAt     time.Time       `json:"created_at"`
 	Expire        int64           `json:"expire"           gorm:"type:bigint(36)"`
 	BaseAmount    decimal.Decimal `json:"base_amount"      gorm:"type:varchar(36)"`
 	QuoteAmount   decimal.Decimal `json:"quote_amount"     gorm:"type:varchar(36)"`
 	ExchangeOrder string          `json:"exchange_order"   gorm:"type:varchar(36);"`
 	OtcOrder      string          `json:"otc_order"        gorm:"type:varchar(36);"`
+	Status        string          `json:"status"           gorm:"INDEX;type:varchar(10);default:'Pending'"`
 }
 
 func (ProfitEvent) TableName() string {
@@ -183,10 +193,12 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				event := it.Value().(*ProfitEvent)
 				//获利了结或者未成交全退款的订单
 				if !event.BaseAmount.Mul(event.Price).Add(event.QuoteAmount).IsNegative() {
+					event.Status = StatusSuccess
 					removed = append(removed, event)
 				}
 				//受exin限制无法成交的订单
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(1 * time.Minute).Before(time.Now()) {
+					event.Status = StatusFailed
 					removed = append(removed, event)
 				}
 				//每笔订单都会发起退款，这里留3s收退款
@@ -204,8 +216,11 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					ant.assetsLock.Lock()
 					balance := ant.assets[send]
 					ant.assetsLock.Unlock()
-					limited := LimitAmount(amount, balance, event.Min, event.Max)
-					if send == event.Quote {
+
+					var limited decimal.Decimal
+					if send == event.Base {
+						limited = LimitAmount(amount, balance, event.Min, event.Max)
+					} else if send == event.Quote {
 						limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
 					}
 
@@ -230,6 +245,55 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
 						log.Println("update event error", err)
 					}
+				}
+			}
+		}
+	}
+}
+
+func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
+	var mess []struct {
+		Base        string
+		Quote       string
+		BaseAmount  decimal.Decimal
+		QuoteAmount decimal.Decimal
+	}
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			checkpoint := time.Now()
+			if err := Database(ctx).Model(&ProfitEvent{}).Where("created_at > ? AND created_at < ? AND status = ?", StartTime, checkpoint, StatusFailed).
+				Select("base, quote, SUM(base_amount) AS base_amount, SUM(quote_amount) AS quote_amount").
+				Group("base, quote").Scan(&mess).Error; err != nil {
+				continue
+			}
+			for _, m := range mess {
+				if m.BaseAmount.IsPositive() && m.QuoteAmount.IsPositive() {
+					continue
+				}
+				side, amount := PageSideAsk, m.BaseAmount
+				if m.QuoteAmount.IsPositive() {
+					side, amount = PageSideBid, m.QuoteAmount
+				}
+
+				var event ProfitEvent
+				if err := Database(ctx).Where("base = ? AND quote = ?", m.Base, m.Quote).Order("created_at DESC").First(&event).Error; err != nil {
+					continue
+				}
+				trace := UuidWithString(side + amount.String() + m.Base + m.Quote)
+				var limited decimal.Decimal
+				balance := decimal.NewFromFloat(1000000)
+				if side == PageSideAsk {
+					limited = LimitAmount(amount, balance, event.Min, event.Max)
+				} else if side == PageSideBid {
+					limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
+				}
+				if _, err := ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err != nil {
+					log.Println("trade in exin error", err)
 				}
 			}
 		}

@@ -85,15 +85,15 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 
 			sum := decimal.Zero
 			s := fmt.Sprintf("%5s:%8v%8v%8v\n", "Symbol", "Before", "Now", "Delta")
-			for symbol, amount := range now {
+			for symbol, amount := range pre {
 				if symbol == "CNB" {
 					continue
 				}
 				a, _ := decimal.NewFromString(amount)
-				b, _ := decimal.NewFromString(pre[symbol])
+				b, _ := decimal.NewFromString(now[symbol])
 				c, _ := decimal.NewFromString(prices[symbol])
-				sum = sum.Add(a.Sub(b).Mul(c))
-				s += fmt.Sprintf("%5s:%8v%8v%8v\n", symbol, b.Round(4), a.Round(4), a.Sub(b).Round(4))
+				sum = sum.Add(b.Sub(a).Mul(c))
+				s += fmt.Sprintf("%5s:%8v%8v%8v\n", symbol, a.Round(4), b.Round(4), b.Sub(a).Round(4))
 			}
 			return ant.client.SendPlainText(ctx, msgView, fmt.Sprintf("%s  Total:  %8v USD", s, sum.Round(4)))
 		default:

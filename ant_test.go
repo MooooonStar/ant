@@ -8,13 +8,14 @@ import (
 	"time"
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetExinDepth(ctx, EOS, XIN)
+	data, _ := GetExinDepth(ctx, XIN, EOS)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println("0-", string(v))
 }

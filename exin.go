@@ -7,8 +7,8 @@ import (
 	"log"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
-	"github.com/MixinNetwork/go-number"
-	"github.com/satori/go.uuid"
+	number "github.com/MixinNetwork/go-number"
+	uuid "github.com/satori/go.uuid"
 	"github.com/vmihailenco/msgpack"
 )
 
@@ -78,6 +78,7 @@ func ExinTrade(side, amount, base, quote string, trace ...string) (string, error
 	}
 
 	precision := ExinAssetPrecision(send, get)
+	//这里不使用round，防止多卖
 	a := number.FromString(amount).RoundFloor(precision)
 
 	log.Printf("=============trade in exin, %s, send %s, get %s, trace: %s", a, Who(send), Who(get), traceId)

@@ -149,6 +149,7 @@ func main() {
 					go bot.Fishing(ctx, base, quote)
 				}
 				go bot.Trade(ctx)
+				go bot.CleanUpTheMess(ctx)
 
 				//ctrl-c 退出时先取消订单
 				select {
