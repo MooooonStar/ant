@@ -241,7 +241,12 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				for _, event := range removed {
 					index := ant.OrderQueue.IndexOf(event)
 					ant.OrderQueue.Remove(index)
-					updates := map[string]interface{}{"base_amount": event.BaseAmount, "quote_amount": event.QuoteAmount, "otc_order": event.OtcOrder}
+					updates := map[string]interface{}{
+						"base_amount":  event.BaseAmount,
+						"quote_amount": event.QuoteAmount,
+						"otc_order":    event.OtcOrder,
+						"status":       event.Status,
+					}
 					if err := Database(ctx).Model(event).Where("id=?", event.ID).Updates(updates).Error; err != nil {
 						log.Println("update event error", err)
 					}
@@ -258,7 +263,7 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 		BaseAmount  decimal.Decimal
 		QuoteAmount decimal.Decimal
 	}
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(120 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
