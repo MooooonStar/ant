@@ -16,14 +16,14 @@ const (
 )
 
 //var checkpoint, _ = time.Parse(time.RFC3339Nano, "2019-01-24T00:00:00.999999999Z00:00")
-var checkpoint = time.Now()
-
 func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
 	var wallets []struct {
 		Asset  string
 		Amount string
 	}
 
+	in, _ := time.LoadLocation("Asia/Chongqing")
+	var checkpoint = time.Date(2019, 1, 24, 8, 15, 0, 0, in)
 	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", snow, checkpoint).
 		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
 	if db.Error != nil {
