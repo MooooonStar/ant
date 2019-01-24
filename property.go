@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/shopspring/decimal"
@@ -11,8 +12,11 @@ import (
 
 const (
 	snow      = "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909"
-	MagicWord = "666"
+	MagicWord = "long live the bitcoin"
 )
+
+//var checkpoint, _ = time.Parse(time.RFC3339Nano, "2019-01-24T00:00:00.999999999Z00:00")
+var checkpoint = time.Now()
 
 func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
 	var wallets []struct {
@@ -20,7 +24,7 @@ func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
 		Amount string
 	}
 
-	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND data = ?", snow, MagicWord).
+	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", snow, checkpoint).
 		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
 	if db.Error != nil {
 		return nil, db.Error

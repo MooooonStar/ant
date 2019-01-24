@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/shopspring/decimal"
@@ -130,4 +131,5 @@ func TestReadAssets(t *testing.T) {
 
 func TestReply(t *testing.T) {
 	log.Println(Reply("不好笑"))
+	log.Println(time.Now())
 }
