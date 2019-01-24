@@ -15,14 +15,18 @@ var (
 	StartTime = time.Date(2019, 1, 24, 22, 10, 0, 0, in)
 )
 
-//var checkpoint, _ = time.Parse(time.RFC3339Nano, "2019-01-24T00:00:00.999999999Z00:00")
 func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
 	var wallets []struct {
 		Asset  string
 		Amount string
 	}
 
-	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", MasterID, StartTime).
+	var s Snapshot
+	if err := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND amount <  0", MasterID).Order("created_at DESC").First(&s).Error; err != nil {
+		return nil, err
+	}
+
+	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", MasterID, s.CreatedAt).
 		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
 	if db.Error != nil {
 		return nil, db.Error
