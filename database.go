@@ -25,6 +25,5 @@ func SetupRedis(ctx context.Context, client *redis.Client) context.Context {
 }
 
 func Redis(ctx context.Context) *redis.Client {
-	v, _ := ctx.Value(keyRedis).(*redis.Client)
-	return v
+	return ctx.Value(keyRedis).(*redis.Client)
 }

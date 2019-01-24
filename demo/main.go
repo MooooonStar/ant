@@ -72,10 +72,10 @@ func main() {
 						}
 						in := bot.TransferInput{
 							AssetId:     ant.GetAssetId(symbol),
-							RecipientId: "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909",
+							RecipientId: ant.MasterID,
 							Amount:      number.FromString(balance),
 							TraceId:     uuid.Must(uuid.NewV4()).String(),
-							Memo:        ant.MagicWord,
+							Memo:        "long live the bitcoin",
 						}
 						err := bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
 						if err != nil {
@@ -87,10 +87,10 @@ func main() {
 					asset := ant.GetAssetId(symbol)
 					in := bot.TransferInput{
 						AssetId:     asset,
-						RecipientId: "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909",
+						RecipientId: ant.MasterID,
 						Amount:      number.FromString(assets[asset]),
 						TraceId:     uuid.Must(uuid.NewV4()).String(),
-						Memo:        ant.MagicWord,
+						Memo:        "long live the bitcoin",
 					}
 					err := bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
 					if err != nil {

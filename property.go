@@ -10,9 +10,9 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const (
-	snow      = "7b3f0a95-3ee9-4c1b-8ae9-170e3877d909"
-	MagicWord = "long live the bitcoin"
+var (
+	in, _      = time.LoadLocation("Asia/Chongqing")
+	checkpoint = time.Date(2019, 1, 24, 8, 15, 0, 0, in)
 )
 
 //var checkpoint, _ = time.Parse(time.RFC3339Nano, "2019-01-24T00:00:00.999999999Z00:00")
@@ -22,9 +22,7 @@ func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
 		Amount string
 	}
 
-	in, _ := time.LoadLocation("Asia/Chongqing")
-	var checkpoint = time.Date(2019, 1, 24, 8, 15, 0, 0, in)
-	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", snow, checkpoint).
+	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", MasterID, checkpoint).
 		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
 	if db.Error != nil {
 		return nil, db.Error
