@@ -14,15 +14,15 @@ import (
 
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetExinDepth(ctx, XIN, EOS)
+	data, _ := GetExinDepth(ctx, EOS, XIN)
 	v, _ := prettyjson.Marshal(&data)
-	fmt.Println("0-", string(v))
+	fmt.Println("012-", string(v))
 }
 
 func TestExinOrder(t *testing.T) {
-	order, err := GetExinOrder(context.TODO(), EOS, USDT)
+	order, err := GetExinOrder(context.TODO(), EOS, XIN)
 	assert.Nil(t, err)
-	fmt.Println("order", order)
+	fmt.Println("order+", order)
 }
 
 func TestOceanTrade(t *testing.T) {

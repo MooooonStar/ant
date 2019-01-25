@@ -24,7 +24,7 @@ type Depth struct {
 }
 
 type Ticker struct {
-	Base  string `json:"echange_asset"`
+	Base  string `json:"exchange_asset"`
 	Quote string `json:"base_asset"`
 	Price string `json:"price"`
 	Min   string `json:"minimum_amount"`
@@ -51,7 +51,7 @@ func GetExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
 }
 
 func GetExinOrder(ctx context.Context, base, quote string) (*Order, error) {
-	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?&base_asset=%s", quote)
+	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?&base_asset=%s&exchange_asset=%s", quote, base)
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
