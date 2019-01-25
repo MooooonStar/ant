@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	ProfitThreshold = 0.010 / (1 - OceanFee) / (1 - ExinFee)
+	ProfitThreshold = 0.015 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee        = 0.001
 	ExinFee         = 0.003
 	OrderExpireTime = int64(5 * time.Second)
@@ -196,12 +196,18 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					event.Status = StatusSuccess
 					removed = append(removed, event)
 				}
-				//受exin限制无法成交的订单
+				//OceanOne上未成交也未收到退款的订单和成交数额太小，exin上无法卖出的订单
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(1 * time.Minute).Before(time.Now()) {
-					event.Status = StatusFailed
-					removed = append(removed, event)
+					//只将成交数额小的订单标记为Failed
+					if event.BaseAmount.Mul(event.QuoteAmount).LessThan(decimal.Zero) {
+						event.Status = StatusFailed
+						removed = append(removed, event)
+					} else {
+						//退款有可能3min后才收到
+						//Nothing need to do
+					}
 				}
-				//每笔订单都会发起退款，这里留3s收退款
+				//每笔订单都会发起退款，这里留3s接收取消订单请求发出后仍成交的钱款。
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3 * time.Second).Before(time.Now()) {
 					amount := event.BaseAmount
 					send, side := event.Base, PageSideAsk
@@ -297,9 +303,12 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 				} else if side == PageSideBid {
 					limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
 				}
-				if _, err := ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err == nil {
-					Database(ctx).Model(&ProfitEvent{}).Where("status = ? AND base = ? AND quote = ?", StatusFailed, m.Base, m.Quote).
-						Update(ProfitEvent{Status: StatusDone, OtcOrder: trace})
+
+				if limited.IsPositive() {
+					if _, err := ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err == nil {
+						Database(ctx).Model(&ProfitEvent{}).Where("status = ? AND base = ? AND quote = ?", StatusFailed, m.Base, m.Quote).
+							Update(ProfitEvent{Status: StatusDone, OtcOrder: trace})
+					}
 				}
 			}
 		}

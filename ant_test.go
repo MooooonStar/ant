@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"testing"
-	"time"
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -131,6 +130,27 @@ func TestReadAssets(t *testing.T) {
 // }
 
 func TestReply(t *testing.T) {
-	log.Println(Reply("不好笑"))
-	log.Println(time.Now())
+	// log.Println(Reply("不好笑"))
+	// log.Println(time.Now())
+	side := PageSideBid
+	amount := decimal.NewFromFloat(0.02893944)
+	base := "6cfe566e-4aad-470b-8c9a-2fd35b49c68d"
+	quote := "c94ac88f-4671-3976-b60a-09064f1811e8"
+	min := decimal.NewFromFloat(8)
+	max := decimal.NewFromFloat(800)
+	price := decimal.NewFromFloat(0.02514453)
+
+	trace := UuidWithString(side + amount.String() + base + quote)
+	var limited decimal.Decimal
+	balance := decimal.NewFromFloat(1000000)
+	if side == PageSideAsk {
+		limited = LimitAmount(amount, balance, min, max)
+	} else if side == PageSideBid {
+		limited = LimitAmount(amount, balance, min.Mul(price), max.Mul(price))
+	}
+	tt, err := ExinTrade(side, limited.String(), base, quote, trace)
+	log.Println(tt, "error", err)
+
+	s := UuidWithString("6a5ef809-fccd-39e9-82b0-68113c770ef8" + ExinCore)
+	log.Println("trace:", trace, "limited:", limited, "s:", s)
 }
