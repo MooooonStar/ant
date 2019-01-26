@@ -262,6 +262,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 	}
 }
 
+//处理受exin上xin最小数量限制无法成交的订单
 func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 	var mess []struct {
 		Base        string
@@ -276,8 +277,9 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			checkpoint := time.Now()
-			if err := Database(ctx).Model(&ProfitEvent{}).Where("created_at < ? AND status = ?", checkpoint, StatusFailed).
+			//价格可能波动，只处理最近十分钟的订单
+			to, from := time.Now(), time.Now().Add(-10*time.Minute)
+			if err := Database(ctx).Model(&ProfitEvent{}).Where("created_at > ? AND created_at <  ? AND status = ?", from, to, StatusFailed).
 				Select("base, quote, SUM(base_amount) AS base_amount, SUM(quote_amount) AS quote_amount").
 				Group("base, quote").Scan(&mess).Error; err != nil {
 				continue
@@ -306,7 +308,8 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 
 				if limited.IsPositive() {
 					if _, err := ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err == nil {
-						Database(ctx).Model(&ProfitEvent{}).Where("status = ? AND base = ? AND quote = ?", StatusFailed, m.Base, m.Quote).
+						Database(ctx).Model(&ProfitEvent{}).Where("created_at > ? AND created_at < ?", from, to).
+							Where("status = ? AND base = ? AND quote = ?", StatusFailed, m.Base, m.Quote).
 							Update(ProfitEvent{Status: StatusDone, OtcOrder: trace})
 					}
 				}
