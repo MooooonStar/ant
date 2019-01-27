@@ -68,7 +68,7 @@ func (book *OrderBook) GetDepth(limit int) *Depth {
 			orders = append(orders, order)
 			count += 1
 			if count >= limit {
-				break
+				it.End()
 			}
 		}
 		return orders

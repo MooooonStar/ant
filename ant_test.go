@@ -84,7 +84,7 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsO26uFtbBklypInhmBpIicyhQrC2wgFWRNg78apXjOjoP4ZuoU+wAAAAAAAAAAAAAAAAAAAAAKFTpU1BVENI"
+	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+w2JLlGP1iPA64ZAeyqSHPdKFTpkNBTkNFTA=="
 	var reply OceanReply
 	reply.Unpack(match)
 	fmt.Println(reply.A, reply.B, reply.O, reply.S)

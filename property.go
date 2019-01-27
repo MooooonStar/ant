@@ -4,15 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
 	"github.com/shopspring/decimal"
-)
-
-var (
-	in, _     = time.LoadLocation("Asia/Chongqing")
-	StartTime = time.Date(2019, 1, 24, 22, 10, 0, 0, in)
 )
 
 func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
@@ -113,35 +107,3 @@ func ReadSnapshot(ctx context.Context, id string) (string, error) {
 
 	return resp.Data.TraceId, nil
 }
-
-// func ReadAssets(ctx context.Context) (map[string]string, error) {
-// 	uri := "/assets"
-// 	token, err := bot.SignAuthenticationToken(ClientId, SessionId, PrivateKey, "GET", uri, "")
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	body, err := bot.Request(ctx, "GET", uri, nil, token)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var resp struct {
-// 		Data []struct {
-// 			AssetId string `json:"asset_id"`
-// 			Balance string `json:"balance"`
-// 		} `json:"data"`
-// 		Error string `json:"error"`
-// 	}
-// 	err = json.Unmarshal(body, &resp)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if resp.Error != "" {
-// 		return nil, errors.New(resp.Error)
-// 	}
-
-// 	assets := make(map[string]string, 0)
-// 	for _, item := range resp.Data {
-// 		assets[item.AssetId] = item.Balance
-// 	}
-// 	return assets, nil
-// }

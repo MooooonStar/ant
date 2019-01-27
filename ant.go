@@ -198,8 +198,12 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				}
 				//OceanOne上未成交也未收到退款的订单和成交数额太小，exin上无法卖出的订单
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(1 * time.Minute).Before(time.Now()) {
+					//本不需要这里再取消一次的，但实际情况不是，原因不明
+					OceanCancel(event.ExchangeOrder)
+
 					//只将成交数额小的订单标记为Failed
-					if event.BaseAmount.Mul(event.QuoteAmount).LessThan(decimal.Zero) {
+					//if event.BaseAmount.Mul(event.QuoteAmount).IsNegative() {
+					if !event.BaseAmount.IsZero() && !event.QuoteAmount.IsZero() {
 						event.Status = StatusFailed
 						removed = append(removed, event)
 					} else {
@@ -207,7 +211,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						//Nothing need to do
 					}
 				}
-				//每笔订单都会发起退款，这里留3s接收取消订单请求发出后仍成交的钱款。
+				//每笔订单都会取消，这里留3s接收取消订单请求发出后仍成交的钱款。
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3 * time.Second).Before(time.Now()) {
 					amount := event.BaseAmount
 					send, side := event.Base, PageSideAsk
@@ -272,10 +276,12 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 	}
 	ticker := time.NewTicker(120 * time.Second)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+
 		case <-ticker.C:
 			//价格可能波动，只处理最近十分钟的订单
 			to, from := time.Now(), time.Now().Add(-10*time.Minute)
