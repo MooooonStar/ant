@@ -8,13 +8,14 @@ import (
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetExinDepth(ctx, XIN, EOS)
+	data, _ := GetExinDepth(ctx, USDT, XIN)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println("0-0", string(v))
 }
@@ -84,15 +85,21 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+w2JLlGP1iPA64ZAeyqSHPdKFTpkNBTkNFTA=="
+	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+wI1JmpPASO+27lBlPgcN5ZaFTpkNBTkNFTA=="
 	var reply OceanReply
 	reply.Unpack(match)
 	fmt.Println(reply.A, reply.B, reply.O, reply.S)
 
-	var r ExinReply
-	r.Unpack("g6FDzQPsoVShRqFPxBA+z+cTxh4+lJdmI5/wKyEu")
-	v, _ := prettyjson.Marshal(r)
-	fmt.Println("exin==", string(v))
+	order := OceanOrder{
+		O: uuid.FromStringOrNil("235266a4-f012-3bed-bb94-194f81c37965"),
+	}
+	fmt.Println(order.Pack())
+
+	// var r ExinReply
+	// r.Unpack("g6FDzQPsoVShRqFPxBA+z+cTxh4+lJdmI5/wKyEu")
+	// v, _ := prettyjson.Marshal(r)
+	// fmt.Println("exin==", string(v))
+	//fmt.Println(base64.StdEncoding.EncodeToString([]byte("235266a4-f012-3bed-bb94-194f81c37965")))
 }
 
 func TestExinMemo(t *testing.T) {

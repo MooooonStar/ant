@@ -29,6 +29,7 @@ var watchingList = []Pair{
 	Pair{ant.XIN, ant.BTC},
 	Pair{ant.EOS, ant.XIN},
 	Pair{ant.ETH, ant.XIN},
+	//	Pair{ant.XIN, ant.USDT},
 }
 
 func main() {

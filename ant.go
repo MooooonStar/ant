@@ -192,7 +192,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			for it := ant.OrderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
 				//获利了结或者未成交全退款的订单
-				if !event.BaseAmount.Mul(event.Price).Add(event.QuoteAmount).IsNegative() {
+				if !event.BaseAmount.IsNegative() && !event.BaseAmount.IsNegative() {
 					event.Status = StatusSuccess
 					removed = append(removed, event)
 				}
