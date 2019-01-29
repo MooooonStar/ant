@@ -12,10 +12,10 @@ import (
 )
 
 type Order struct {
-	Price  decimal.Decimal
-	Amount decimal.Decimal
-	Min    decimal.Decimal
-	Max    decimal.Decimal
+	Price  decimal.Decimal `json:"price"`
+	Amount decimal.Decimal `json:"amount"`
+	Min    decimal.Decimal `json:"min"`
+	Max    decimal.Decimal `json:"max"`
 }
 
 type Depth struct {
@@ -29,6 +29,63 @@ type Ticker struct {
 	Price string `json:"price"`
 	Min   string `json:"minimum_amount"`
 	Max   string `json:"maximum_amount"`
+}
+
+var httpClient = &http.Client{Timeout: 10 * time.Second}
+
+func FetchExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
+	url := "https://api.exinone.com/instant/" + fmt.Sprint(PairIndex[Who(base)+"/"+Who(quote)])
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	bt, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var Resp struct {
+		Data struct {
+			Depth struct {
+				Asks []Order `json:"sell"`
+				Bids []Order `json:"buy"`
+			} `json:"depth"`
+			BuyMax  decimal.Decimal `json:"buyMax"`
+			SellMax decimal.Decimal `json:"sellMax"`
+			BuyMin  decimal.Decimal `json:"buyMin"`
+			SellMin decimal.Decimal `json:"SellMin"`
+			Price   decimal.Decimal `json:"price"`
+		} `json:"data"`
+	}
+
+	err = json.Unmarshal(bt, &Resp)
+	if err != nil {
+		return nil, err
+	}
+
+	for idx, _ := range Resp.Data.Depth.Asks {
+		Resp.Data.Depth.Asks[idx].Min = Resp.Data.SellMin
+		Resp.Data.Depth.Asks[idx].Max = Resp.Data.SellMax
+	}
+
+	for idx, order := range Resp.Data.Depth.Bids {
+		Resp.Data.Depth.Bids[idx].Min = Resp.Data.BuyMin.Div(order.Price)
+		Resp.Data.Depth.Bids[idx].Max = Resp.Data.BuyMax.Div(order.Price)
+	}
+
+	d := Depth{
+		Asks: Resp.Data.Depth.Asks,
+		Bids: Resp.Data.Depth.Bids,
+	}
+	return &d, nil
 }
 
 func GetExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
@@ -52,16 +109,13 @@ func GetExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
 
 func GetExinOrder(ctx context.Context, base, quote string) (*Order, error) {
 	url := "https://exinone.com/exincore/markets" + fmt.Sprintf("?&base_asset=%s&exchange_asset=%s", quote, base)
-	client := http.Client{
-		Timeout: 10 * time.Second,
-	}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -94,16 +148,13 @@ func GetExinOrder(ctx context.Context, base, quote string) (*Order, error) {
 
 func GetOceanDepth(ctx context.Context, base, quote string) (*Depth, error) {
 	url := "https://events.ocean.one/markets/" + fmt.Sprintf("%s-%s", base, quote) + "/book"
-	client := http.Client{
-		Timeout: 10 * time.Second,
-	}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
