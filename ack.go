@@ -32,6 +32,7 @@ var PairIndex = map[string]int{
 	"EOS/ETH":  22,
 	"EOS/XIN":  23,
 	"ETH/XIN":  24,
+	"XIN/USDT": 28,
 }
 
 func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId string) error {

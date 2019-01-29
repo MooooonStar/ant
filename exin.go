@@ -121,6 +121,9 @@ func ExinAssetPrecision(send, get string) int32 {
 	}
 
 	if get == USDT {
+		if send == XIN {
+			return 3
+		}
 		return 4
 	}
 
