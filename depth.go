@@ -71,22 +71,44 @@ func FetchExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
 		return nil, err
 	}
 
-	for idx, _ := range Resp.Data.Depth.Asks {
-		Resp.Data.Depth.Asks[idx].Min = Resp.Data.SellMin
-		Resp.Data.Depth.Asks[idx].Max = Resp.Data.SellMax
+	var d Depth
+	if (quote == XIN && base == EOS) || (quote == XIN && base == ETH) {
+		for idx, _ := range Resp.Data.Depth.Asks {
+			price := Resp.Data.Depth.Asks[idx].Price
+			Resp.Data.Depth.Asks[idx].Price = decimal.NewFromFloat(1.0).Div(price)
+			Resp.Data.Depth.Asks[idx].Min = Resp.Data.BuyMin
+			Resp.Data.Depth.Asks[idx].Max = Resp.Data.BuyMax
+		}
+
+		for idx, order := range Resp.Data.Depth.Bids {
+			price := Resp.Data.Depth.Bids[idx].Price
+			Resp.Data.Depth.Bids[idx].Price = decimal.NewFromFloat(1.0).Div(price)
+
+			Resp.Data.Depth.Bids[idx].Min = Resp.Data.SellMin.Mul(order.Price)
+			Resp.Data.Depth.Bids[idx].Max = Resp.Data.SellMax.Mul(order.Price)
+		}
+
+		d = Depth{
+			Asks: Resp.Data.Depth.Bids,
+			Bids: Resp.Data.Depth.Asks,
+		}
+	} else {
+		for idx, _ := range Resp.Data.Depth.Asks {
+			Resp.Data.Depth.Asks[idx].Min = Resp.Data.SellMin
+			Resp.Data.Depth.Asks[idx].Max = Resp.Data.SellMax
+		}
+
+		for idx, order := range Resp.Data.Depth.Bids {
+			Resp.Data.Depth.Bids[idx].Min = Resp.Data.BuyMin.Div(order.Price)
+			Resp.Data.Depth.Bids[idx].Max = Resp.Data.BuyMax.Div(order.Price)
+		}
+
+		d = Depth{
+			Asks: Resp.Data.Depth.Asks,
+			Bids: Resp.Data.Depth.Bids,
+		}
 	}
 
-	for idx, order := range Resp.Data.Depth.Bids {
-		Resp.Data.Depth.Bids[idx].Min = Resp.Data.BuyMin.Div(order.Price)
-		Resp.Data.Depth.Bids[idx].Max = Resp.Data.BuyMax.Div(order.Price)
-	}
-
-	d := Depth{
-		// Asks: Resp.Data.Depth.Asks,
-		// Bids: Resp.Data.Depth.Bids,
-		Bids: Resp.Data.Depth.Asks,
-		Asks: Resp.Data.Depth.Bids,
-	}
 	return &d, nil
 }
 

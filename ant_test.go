@@ -16,7 +16,7 @@ import (
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
 	//data, _ := GetExinDepth(ctx, USDT, XIN)
-	data, _ := FetchExinDepth(ctx, XIN, USDT)
+	data, _ := FetchExinDepth(ctx, EOS, XIN)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println("11111", string(v))
 }
