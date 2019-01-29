@@ -82,8 +82,10 @@ func FetchExinDepth(ctx context.Context, base, quote string) (*Depth, error) {
 	}
 
 	d := Depth{
-		Asks: Resp.Data.Depth.Asks,
-		Bids: Resp.Data.Depth.Bids,
+		// Asks: Resp.Data.Depth.Asks,
+		// Bids: Resp.Data.Depth.Bids,
+		Bids: Resp.Data.Depth.Asks,
+		Asks: Resp.Data.Depth.Bids,
 	}
 	return &d, nil
 }
