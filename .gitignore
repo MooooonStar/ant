@@ -3,4 +3,5 @@ demo/config.dev.go
 config*.go
 demo/demo
 demo/ant
+demo/cat
 demoo/ant-local

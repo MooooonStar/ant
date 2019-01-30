@@ -28,7 +28,8 @@ func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 			return
 		case <-ticker.C:
 			precent := decimal.NewFromFloat(LowerPercent)
-			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
+			//if otc, err := GetExinDepth(ctx, base, quote); err == nil {
+			if otc, err := FetchExinDepth(ctx, base, quote); err == nil {
 				trade := ant.GetOceanTrade(ctx, base, quote)
 				if _, ok := orders[trade.CreateAt]; ok {
 					continue

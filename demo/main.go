@@ -26,10 +26,11 @@ type Pair struct {
 }
 
 var watchingList = []Pair{
-	Pair{ant.XIN, ant.BTC},
-	Pair{ant.EOS, ant.XIN},
-	Pair{ant.ETH, ant.XIN},
 	Pair{ant.XIN, ant.USDT},
+	Pair{ant.EOS, ant.XIN},
+	Pair{ant.BTC, ant.USDT},
+	Pair{ant.ETH, ant.XIN},
+	Pair{ant.XIN, ant.BTC},
 }
 
 func main() {

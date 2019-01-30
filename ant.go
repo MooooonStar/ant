@@ -192,7 +192,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 			for it := ant.OrderQueue.Iterator(); it.Next(); {
 				event := it.Value().(*ProfitEvent)
 				//获利了结或者未成交全退款的订单
-				if !event.BaseAmount.IsNegative() && !event.BaseAmount.IsNegative() {
+				if !event.BaseAmount.IsNegative() && !event.QuoteAmount.IsNegative() {
 					event.Status = StatusSuccess
 					removed = append(removed, event)
 				}
@@ -380,7 +380,8 @@ func (ant *Ant) Watching(ctx context.Context, base, quote string) {
 		case <-ctx.Done():
 			return
 		default:
-			if otc, err := GetExinDepth(ctx, base, quote); err == nil {
+			//if otc, err := GetExinDepth(ctx, base, quote); err == nil {
+			if otc, err := FetchExinDepth(ctx, base, quote); err == nil {
 				pair := base + "-" + quote
 				if exchange := ant.books[pair].GetDepth(3); exchange != nil {
 					if len(exchange.Bids) > 0 && len(otc.Asks) > 0 {

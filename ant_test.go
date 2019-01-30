@@ -15,9 +15,10 @@ import (
 
 func TestGetExinDepth(t *testing.T) {
 	ctx := context.Background()
-	data, _ := GetExinDepth(ctx, USDT, XIN)
+	//data, _ := GetExinDepth(ctx, USDT, XIN)
+	data, _ := FetchExinDepth(ctx, ETH, XIN)
 	v, _ := prettyjson.Marshal(&data)
-	fmt.Println("0-0", string(v))
+	fmt.Println("11111", string(v))
 }
 
 func TestExinOrder(t *testing.T) {
@@ -48,7 +49,7 @@ func TestExinTrade(t *testing.T) {
 //201602a3-a0d2-439e-8e63-e1b6dec86b76
 func TestOceanCancel(t *testing.T) {
 	//OceanCore = F1exCore
-	err := OceanCancel("7eae417b-e534-361d-a861-a541d27a9680")
+	err := OceanCancel("cf7325dc-e642-33a4-a2b9-8aa12bdfd27d")
 	fmt.Println(err, "")
 }
 
