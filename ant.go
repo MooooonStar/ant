@@ -234,7 +234,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
 					}
 
-					if !limited.IsPositive() {
+					if !limited.IsPositive() || !ant.enableExin {
 						log.Printf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
 					} else {
 						otcOrder := UuidWithString(event.ID + ExinCore)
@@ -312,7 +312,7 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 					limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
 				}
 
-				if limited.IsPositive() {
+				if limited.IsPositive() && ant.enableExin {
 					if _, err := ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err == nil {
 						Database(ctx).Model(&ProfitEvent{}).Where("created_at > ? AND created_at < ?", from, to).
 							Where("status = ? AND base = ? AND quote = ?", StatusFailed, m.Base, m.Quote).
@@ -359,9 +359,7 @@ func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 }
 
 func (ant *Ant) Trade(ctx context.Context) error {
-	if ant.enableExin {
-		go ant.OnExpire(ctx)
-	}
+	go ant.OnExpire(ctx)
 	for {
 		select {
 		case <-ctx.Done():
