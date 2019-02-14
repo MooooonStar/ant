@@ -18,7 +18,7 @@ const (
 	ProfitThreshold = 0.010 / (1 - OceanFee) / (1 - ExinFee)
 	OceanFee        = 0.001
 	ExinFee         = 0.003
-	OrderExpireTime = int64(5 * time.Second)
+	OrderExpireTime = int64(10 * time.Second)
 
 	//Ocean One上订单未成交
 	StatusPending = "Pending"

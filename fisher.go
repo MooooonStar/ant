@@ -20,7 +20,7 @@ type Trade struct {
 
 func (ant *Ant) Fishing(ctx context.Context, base, quote string) {
 	orders := make(map[string]bool, 0)
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
