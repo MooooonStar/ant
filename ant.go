@@ -196,10 +196,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					removed = append(removed, event)
 				}
 				//OceanOne上未成交也未收到退款的订单和成交数额太小，exin上无法卖出的订单
-				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(1 * time.Minute).Before(time.Now()) {
-					//本不需要这里再取消一次的，但实际情况不是，原因不明
-					OceanCancel(event.ExchangeOrder)
-
+				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(2 * time.Minute).Before(time.Now()) {
 					//只将成交数额小的订单标记为Failed
 					//if event.BaseAmount.Mul(event.QuoteAmount).IsNegative() {
 					if !event.BaseAmount.IsZero() && !event.QuoteAmount.IsZero() {
