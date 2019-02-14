@@ -9,7 +9,6 @@ import (
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
-	prettyjson "github.com/hokaccha/go-prettyjson"
 )
 
 const (
@@ -99,9 +98,6 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 	if len(s.OpponentId) == 0 || s.Asset.AssetId == CNB {
 		return nil
 	}
-
-	v, _ := prettyjson.Marshal(s)
-	log.Println("find snapshot:", string(v))
 
 	if err := ex.HandleSnapshot(ctx, s); err != nil {
 		log.Println(err)
