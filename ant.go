@@ -75,7 +75,7 @@ func NewAnt(ocean, exin bool) *Ant {
 	return &Ant{
 		enableOcean: ocean,
 		enableExin:  exin,
-		event:       make(chan *ProfitEvent, 10),
+		event:       make(chan *ProfitEvent, 20),
 		snapshots:   make(map[string]bool, 0),
 		orders:      make(map[string]bool, 0),
 		books:       make(map[string]*OrderBook, 0),
@@ -118,8 +118,10 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 
 	defer func() {
 		time.AfterFunc(time.Duration(OrderExpireTime), func() {
-			if err := OceanCancel(exchangeOrder); err == nil {
-				ant.orders[exchangeOrder] = true
+			if done, ok := ant.orders[exchangeOrder]; ok && !done {
+				if err := OceanCancel(exchangeOrder); err == nil {
+					ant.orders[exchangeOrder] = true
+				}
 			}
 		})
 
@@ -197,6 +199,13 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				}
 				//OceanOne上未成交也未收到退款的订单和成交数额太小，exin上无法卖出的订单
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(2 * time.Minute).Before(time.Now()) {
+					//本不需要这里再取消一次的，但实际情况不是，可能是并发转账时出错了
+					if done, ok := ant.orders[event.ExchangeOrder]; ok && !done {
+						if err := OceanCancel(event.ExchangeOrder); err == nil {
+							ant.orders[event.ExchangeOrder] = true
+						}
+					}
+
 					//只将成交数额小的订单标记为Failed
 					//if event.BaseAmount.Mul(event.QuoteAmount).IsNegative() {
 					if !event.BaseAmount.IsZero() && !event.QuoteAmount.IsZero() {
@@ -322,11 +331,6 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 
 func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
 	amount, _ := decimal.NewFromString(s.Amount)
-	//这里再取消一次，为啥会有订单没有取消掉啊啊啊啊？？？？
-	if amount.IsNegative() && s.OpponentId != ExinCore {
-		time.AfterFunc(5*time.Minute, func() { OceanCancel(s.TraceId) })
-	}
-
 	matched := &ProfitEvent{}
 	for it := ant.OrderQueue.Iterator(); it.Next(); {
 		event := it.Value().(*ProfitEvent)
