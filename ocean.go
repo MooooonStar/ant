@@ -142,7 +142,7 @@ func OceanCancel(trace string) error {
 	return bot.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     CNB,
 		RecipientId: OceanCore,
-		Amount:      number.FromFloat(0.001010),
+		Amount:      number.FromFloat(0.00000001),
 		TraceId:     cancelTrace,
 		Memo:        order.Pack(),
 	}, ClientId, SessionId, PrivateKey, PinCode, PinToken)
