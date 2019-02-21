@@ -27,30 +27,11 @@ func TestExinOrder(t *testing.T) {
 	fmt.Println("order+", order)
 }
 
-func TestOceanTrade(t *testing.T) {
-	order, err := OceanTrade(PageSideAsk, "0", "1.2", "M", EOS, BTC)
-	assert.Nil(t, err)
-	fmt.Println("order", order)
-}
-
 func TestOceanDepth(t *testing.T) {
 	ctx := context.Background()
 	data, _ := GetOceanDepth(ctx, BTC, USDT)
 	v, _ := prettyjson.Marshal(&data)
 	fmt.Println(string(v))
-}
-
-func TestExinTrade(t *testing.T) {
-	//price, amount := 3936.6133, 0.0003
-	trace, err := ExinTrade(PageSideAsk, "0.6", EOS, BTC)
-	fmt.Println(trace, err)
-}
-
-//201602a3-a0d2-439e-8e63-e1b6dec86b76
-func TestOceanCancel(t *testing.T) {
-	//OceanCore = F1exCore
-	err := OceanCancel("cf7325dc-e642-33a4-a2b9-7aa12bdfd27d")
-	fmt.Println(err, err == nil, "hello")
 }
 
 func TestUUIDl(t *testing.T) {
@@ -103,10 +84,6 @@ func TestOrderMemo(t *testing.T) {
 	//fmt.Println(base64.StdEncoding.EncodeToString([]byte("235266a4-f012-3bed-bb94-194f81c37965")))
 }
 
-func TestExinMemo(t *testing.T) {
-	ExinTradeMessager("buy", "2", EOS, USDT)
-}
-
 func TestExinReply(t *testing.T) {
 	var reply ExinReply
 	reply.Unpack("hqFDzQPooVCmMTEzLjAzoUaoMC4wMDI2NDWiRkHEEIFbCxonZDc2j6pC1pT6YgqhVKFGoU/EEF8NwUzCCjhOhEgAMv3/veg=")
@@ -118,47 +95,4 @@ func TestReadAssets(t *testing.T) {
 	data, _, _ := ReadAssets(context.TODO())
 	v, _ := prettyjson.Marshal(data)
 	fmt.Println(string(v))
-}
-
-// func TestSumAssets(t *testing.T) {
-// 	prices, err := GetExinPrices(context.Background(), BTC)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	log.Println("prices", prices)
-
-// 	sum := 0.0
-// 	for asset, amount := range Wallet {
-// 		price, _ := strconv.ParseFloat(prices[asset], 64)
-// 		sum += price * amount
-// 	}
-
-// 	log.Println("sum", sum)
-// }
-
-func TestReply(t *testing.T) {
-	// log.Println(Reply("不好笑"))
-	// log.Println(time.Now())
-	side := PageSideBid
-	amount := decimal.NewFromFloat(0.02893944)
-	base := "6cfe566e-4aad-470b-8c9a-2fd35b49c68d"
-	quote := "c94ac88f-4671-3976-b60a-09064f1811e8"
-	min := decimal.NewFromFloat(8)
-	max := decimal.NewFromFloat(800)
-	price := decimal.NewFromFloat(0.02514453)
-
-	trace := UuidWithString(side + amount.String() + base + quote)
-	var limited decimal.Decimal
-	balance := decimal.NewFromFloat(1000000)
-	if side == PageSideAsk {
-		limited = LimitAmount(amount, balance, min, max)
-	} else if side == PageSideBid {
-		limited = LimitAmount(amount, balance, min.Mul(price), max.Mul(price))
-	}
-	tt, err := ExinTrade(side, limited.String(), base, quote, trace)
-	log.Println(tt, "error", err)
-
-	s := UuidWithString("6a5ef809-fccd-39e9-82b0-68113c770ef8" + ExinCore)
-	log.Println("trace:", trace, "limited:", limited, "s:", s)
 }

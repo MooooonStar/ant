@@ -64,7 +64,7 @@ func (order *ExinReply) Unpack(memo string) error {
 	return msgpack.Unmarshal(parsedpack, order)
 }
 
-func ExinTrade(side, amount, base, quote string, trace ...string) (string, error) {
+func (ant *Ant) ExinTrade(side, amount, base, quote string, trace ...string) (string, error) {
 	traceId := uuid.Must(uuid.NewV4()).String()
 	if len(trace) == 1 {
 		traceId = trace[0]
@@ -89,10 +89,10 @@ func ExinTrade(side, amount, base, quote string, trace ...string) (string, error
 		TraceId:     traceId,
 		Memo:        order.Pack(),
 	}
-	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+	return traceId, ant.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
-func ExinTradeMessager(side, amount, base, quote string, trace ...string) (string, error) {
+func (ant *Ant) ExinTradeMessager(side, amount, base, quote string, trace ...string) (string, error) {
 	memo := fmt.Sprintf("ExinOne %s/%s %s", Who(base), Who(quote), side)
 	traceId := uuid.Must(uuid.NewV4()).String()
 	if len(trace) == 1 {
@@ -112,7 +112,7 @@ func ExinTradeMessager(side, amount, base, quote string, trace ...string) (strin
 		TraceId:     traceId,
 		Memo:        memo,
 	}
-	return traceId, bot.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+	return traceId, ant.CreateTransfer(context.TODO(), &transfer, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 }
 
 func ExinAssetPrecision(send, get string) int32 {

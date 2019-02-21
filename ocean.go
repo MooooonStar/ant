@@ -5,7 +5,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"math/big"
 	"math/rand"
+	"sync"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
@@ -99,7 +101,7 @@ func (reply *OceanReply) Unpack(memo string) error {
 }
 
 //TODO
-func OceanTrade(side, price, amount, category, base, quote string, trace ...string) (string, error) {
+func (ant *Ant) OceanTrade(side, price, amount, category, base, quote string, trace ...string) (string, error) {
 	send, get, s := base, quote, "A"
 	if side == PageSideBid {
 		send, get, s = quote, base, "B"
@@ -122,7 +124,7 @@ func OceanTrade(side, price, amount, category, base, quote string, trace ...stri
 		traceId = trace[0]
 	}
 	log.Printf("++++++%s %s at price %12.8s, amount %12.8s, type: %s, trace: %s ", side, Who(base), price, amount, category, traceId)
-	err := bot.CreateTransfer(context.TODO(), &bot.TransferInput{
+	err := ant.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     send,
 		RecipientId: OceanCore,
 		Amount:      number.FromString(amount).Round(AmountPrecision),
@@ -132,14 +134,21 @@ func OceanTrade(side, price, amount, category, base, quote string, trace ...stri
 	return traceId, err
 }
 
+func (ant *Ant) CreateTransfer(ctx context.Context, in *bot.TransferInput, uid, sid, sessionKey, pin, pinToken string) error {
+	mutex := ant.mutexes.fetch(in.RecipientId, in.AssetId)
+	mutex.Lock()
+	defer mutex.Unlock()
+	return bot.CreateTransfer(ctx, in, uid, sid, sessionKey, pin, pinToken)
+}
+
 //TODO
-func OceanCancel(trace string) error {
+func (ant *Ant) OceanCancel(trace string) error {
 	log.Printf("-----------Cancel : %v", trace)
 	order := OceanOrder{
 		O: uuid.Must(uuid.FromString(trace)),
 	}
 	cancelTrace := uuid.Must(uuid.NewV4()).String()
-	return bot.CreateTransfer(context.TODO(), &bot.TransferInput{
+	return ant.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     CNB,
 		RecipientId: OceanCore,
 		Amount:      number.FromFloat(0.00000001),
@@ -224,6 +233,36 @@ func OrderCheck(action OceanOrder, desireAmount, quote string) error {
 		}
 	}
 	return nil
+}
+
+type tmap struct {
+	sync.Map
+}
+
+func newTmap() *tmap {
+	return &tmap{
+		Map: sync.Map{},
+	}
+}
+
+func (m *tmap) fetch(user, asset string) *sync.Mutex {
+	uu, err := uuid.FromString(user)
+	if err != nil {
+		panic(user)
+	}
+	u := new(big.Int).SetBytes(uu.Bytes())
+	au, err := uuid.FromString(asset)
+	if err != nil {
+		panic(asset)
+	}
+	a := new(big.Int).SetBytes(au.Bytes())
+	s := new(big.Int).Add(u, a)
+	key := new(big.Int).Mod(s, big.NewInt(100)).String()
+	if _, found := m.Load(key); !found {
+		m.Store(key, new(sync.Mutex))
+	}
+	val, _ := m.Load(key)
+	return val.(*sync.Mutex)
 }
 
 func RandomBrokerId() string {

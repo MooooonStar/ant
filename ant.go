@@ -69,6 +69,7 @@ type Ant struct {
 	assetsLock sync.Mutex
 	assets     map[string]decimal.Decimal
 	client     *bot.BlazeClient
+	mutexes    *tmap
 }
 
 func NewAnt(ocean, exin bool) *Ant {
@@ -82,6 +83,7 @@ func NewAnt(ocean, exin bool) *Ant {
 		assets:      make(map[string]decimal.Decimal, 0),
 		OrderQueue:  arraylist.New(),
 		client:      bot.NewBlazeClient(ClientId, SessionId, PrivateKey),
+		mutexes:     newTmap(),
 	}
 }
 
@@ -103,7 +105,7 @@ func (ant *Ant) OnOrderMessage(base, quote string) *OrderBook {
 func (ant *Ant) Clean() {
 	for trace, ok := range ant.orders {
 		if !ok {
-			OceanCancel(trace)
+			ant.OceanCancel(trace)
 		}
 	}
 	//TODO, event中baseAmount和quoteAmout的数量和预期不一致
@@ -119,7 +121,7 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 	defer func() {
 		time.AfterFunc(time.Duration(OrderExpireTime), func() {
 			if done, ok := ant.orders[exchangeOrder]; ok && !done {
-				if err := OceanCancel(exchangeOrder); err == nil {
+				if err := ant.OceanCancel(exchangeOrder); err == nil {
 					ant.orders[exchangeOrder] = true
 				}
 			}
@@ -151,7 +153,7 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 	}
 
 	ant.orders[exchangeOrder] = false
-	_, err := OceanTrade(e.Category, e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder)
+	_, err := ant.OceanTrade(e.Category, e.Price.String(), amount.String(), OrderTypeLimit, e.Base, e.Quote, exchangeOrder)
 	if err != nil {
 		return err
 	}
@@ -201,7 +203,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(2 * time.Minute).Before(time.Now()) {
 					//本不需要这里再取消一次的，但实际情况不是，可能是并发转账时出错了
 					if done, ok := ant.orders[event.ExchangeOrder]; ok && !done {
-						if err := OceanCancel(event.ExchangeOrder); err == nil {
+						if err := ant.OceanCancel(event.ExchangeOrder); err == nil {
 							ant.orders[event.ExchangeOrder] = true
 						}
 					}
@@ -243,7 +245,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						log.Printf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
 					} else {
 						otcOrder := UuidWithString(event.ID + ExinCore)
-						if _, err := ExinTrade(side, limited.String(), event.Base, event.Quote, otcOrder); err != nil {
+						if _, err := ant.ExinTrade(side, limited.String(), event.Base, event.Quote, otcOrder); err != nil {
 							log.Println(err)
 							continue
 						}
@@ -318,7 +320,7 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 				}
 
 				if limited.IsPositive() && ant.enableExin {
-					if _, err := ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err == nil {
+					if _, err := ant.ExinTrade(side, limited.String(), m.Base, m.Quote, trace); err == nil {
 						Database(ctx).Model(&ProfitEvent{}).Where("created_at > ? AND created_at < ?", from, to).
 							Where("status = ? AND base = ? AND quote = ?", StatusFailed, m.Base, m.Quote).
 							Update(ProfitEvent{Status: StatusDone, OtcOrder: trace})
