@@ -32,7 +32,7 @@ const (
 
 type ProfitEvent struct {
 	ID            string          `json:"-"                gorm:"type:varchar(36);primary_key"`
-	CreatedAt     time.Time       `json:"created_at"`
+	CreatedAt     time.Time       `json:"created_at"       gorm:"precision:6"`
 	Category      string          `json:"category"         gorm:"type:varchar(10)"`
 	Price         decimal.Decimal `json:"price"            gorm:"type:varchar(36)"`
 	Profit        decimal.Decimal `json:"profit"           gorm:"type:varchar(36)"`

@@ -27,7 +27,7 @@ type Snapshot struct {
 	UserId     string    `json:"user_id"          gorm:"type:varchar(36)"`
 	OpponentId string    `json:"opponent_id"      gorm:"type:varchar(36)"`
 	Data       string    `json:"data"             gorm:"type:varchar(255)"`
-	CreatedAt  time.Time `json:"created_at"       gorm:"type:timestamp"`
+	CreatedAt  time.Time `json:"created_at"       gorm:"type:timestamp;precision:6"`
 	Asset      `json:"asset"            gorm:"type:varchar(36)"`
 }
 
