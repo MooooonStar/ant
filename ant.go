@@ -55,8 +55,7 @@ func (ProfitEvent) TableName() string {
 
 type Ant struct {
 	//是否开启交易
-	enableOcean bool
-	enableExin  bool
+	enableExin bool
 	//发现套利机会
 	event chan *ProfitEvent
 	//所有交易的snapshot_id
@@ -72,18 +71,17 @@ type Ant struct {
 	mutexes    *tmap
 }
 
-func NewAnt(ocean, exin bool) *Ant {
+func NewAnt() *Ant {
 	return &Ant{
-		enableOcean: ocean,
-		enableExin:  exin,
-		event:       make(chan *ProfitEvent, 20),
-		snapshots:   make(map[string]bool, 0),
-		orders:      make(map[string]bool, 0),
-		books:       make(map[string]*OrderBook, 0),
-		assets:      make(map[string]decimal.Decimal, 0),
-		OrderQueue:  arraylist.New(),
-		client:      bot.NewBlazeClient(ClientId, SessionId, PrivateKey),
-		mutexes:     newTmap(),
+		enableExin: false,
+		event:      make(chan *ProfitEvent, 20),
+		snapshots:  make(map[string]bool, 0),
+		orders:     make(map[string]bool, 0),
+		books:      make(map[string]*OrderBook, 0),
+		assets:     make(map[string]decimal.Decimal, 0),
+		OrderQueue: arraylist.New(),
+		client:     bot.NewBlazeClient(ClientId, SessionId, PrivateKey),
+		mutexes:    newTmap(),
 	}
 }
 
@@ -129,11 +127,6 @@ func (ant *Ant) trade(ctx context.Context, e *ProfitEvent) error {
 
 		go ant.Notice(ctx, *e)
 	}()
-
-	if !ant.enableOcean {
-		ant.orders[exchangeOrder] = true
-		return nil
-	}
 
 	//多付款，保证扣完手续费后能清空挂单
 	amount := e.Amount.Mul(decimal.NewFromFloat(1.1))
@@ -242,7 +235,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					}
 
 					if !limited.IsPositive() || !ant.enableExin {
-						log.Printf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v", Who(send), balance, event.Min, send, amount, limited)
+						log.Printf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v, enable: %v", Who(send), balance, event.Min, send, amount, limited, ant.enableExin)
 					} else {
 						otcOrder := UuidWithString(event.ID + ExinCore)
 						if _, err := ant.ExinTrade(side, limited.String(), event.Base, event.Quote, otcOrder); err != nil {

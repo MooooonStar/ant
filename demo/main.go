@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"sort"
-	"strings"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
@@ -58,39 +57,19 @@ func main() {
 		{
 			Name:  "clear",
 			Usage: "clear all assets",
-			Flags: []cli.Flag{
-				cli.StringFlag{Name: "symbol,s"},
-			},
 			Action: func(c *cli.Context) error {
-				symbol := strings.ToUpper(c.String("symbol"))
 				assets, _, err := ant.ReadAssets(context.TODO())
 				if err != nil {
 					return err
 				}
-				if symbol == "ALL" {
-					for symbol, balance := range assets {
-						if symbol == "CNB" {
-							continue
-						}
-						in := bot.TransferInput{
-							AssetId:     ant.GetAssetId(symbol),
-							RecipientId: ant.MasterID,
-							Amount:      number.FromString(balance),
-							TraceId:     uuid.Must(uuid.NewV4()).String(),
-							Memo:        "long live the bitcoin",
-						}
-						err := bot.CreateTransfer(context.Background(), &in, ant.ClientId, ant.SessionId, ant.PrivateKey, ant.PinCode, ant.PinToken)
-						if err != nil {
-							log.Println("clear money error ", err)
-						}
+				for symbol, balance := range assets {
+					if symbol == "CNB" {
+						continue
 					}
-					return nil
-				} else {
-					asset := ant.GetAssetId(symbol)
 					in := bot.TransferInput{
-						AssetId:     asset,
+						AssetId:     ant.GetAssetId(symbol),
 						RecipientId: ant.MasterID,
-						Amount:      number.FromString(assets[symbol]),
+						Amount:      number.FromString(balance),
 						TraceId:     uuid.Must(uuid.NewV4()).String(),
 						Memo:        "long live the bitcoin",
 					}
@@ -98,8 +77,8 @@ func main() {
 					if err != nil {
 						log.Println("clear money error ", err)
 					}
-					return err
 				}
+				return nil
 			},
 		},
 		{
@@ -110,9 +89,6 @@ func main() {
 				cli.BoolFlag{Name: "exin"},
 			},
 			Action: func(c *cli.Context) error {
-				ocean := c.Bool("ocean")
-				exin := c.Bool("exin")
-
 				conf := fmt.Sprintf("%s:%s@%s(%s)/%s?parseTime=True&charset=utf8mb4",
 					DBUsername, DBPassword, "tcp", DBHost, DBName)
 				db, err := gorm.Open("mysql", conf)
@@ -136,7 +112,7 @@ func main() {
 				ctx = ant.SetDB(ctx, db)
 				ctx = ant.SetupRedis(ctx, redisClient)
 
-				bot := ant.NewAnt(ocean, exin)
+				bot := ant.NewAnt()
 				go bot.PollMixinNetwork(ctx)
 				go bot.PollMixinMessage(ctx)
 				go bot.UpdateBalance(ctx)

@@ -72,6 +72,12 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				return err
 			}
 			return ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back soon.")
+		case "disable exin":
+			ant.enableExin = false
+			return ant.client.SendPlainText(ctx, msgView, "exin disabled")
+		case "enable exin":
+			ant.enableExin = true
+			return ant.client.SendPlainText(ctx, msgView, "exin enabled")
 		case "help", "帮助":
 			return ant.client.SendPlainText(ctx, msgView, "Too young too simple. No help message.")
 		case "profit":

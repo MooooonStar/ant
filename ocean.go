@@ -126,7 +126,7 @@ func (ant *Ant) OceanTrade(side, price, amount, category, base, quote string, tr
 	log.Printf("++++++%s %s at price %12.8s, amount %12.8s, type: %s, trace: %s ", side, Who(base), price, amount, category, traceId)
 	err := ant.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     send,
-		RecipientId: OceanCore,
+		RecipientId: RandomBrokerId(),
 		Amount:      number.FromString(amount).Round(AmountPrecision),
 		TraceId:     traceId,
 		Memo:        order.Pack(),
@@ -150,7 +150,7 @@ func (ant *Ant) OceanCancel(trace string) error {
 	cancelTrace := uuid.Must(uuid.NewV4()).String()
 	return ant.CreateTransfer(context.TODO(), &bot.TransferInput{
 		AssetId:     CNB,
-		RecipientId: OceanCore,
+		RecipientId: RandomBrokerId(),
 		Amount:      number.FromFloat(0.00000001),
 		TraceId:     cancelTrace,
 		Memo:        order.Pack(),
