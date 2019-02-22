@@ -83,7 +83,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 		case "cancelorders":
 			orders, err := ListOrders("PENDING")
 			if err != nil {
-				return err
+				return ant.client.SendPlainText(ctx, msgView, err.Error())
 			}
 			if err := ant.CancelOrders(orders); err != nil {
 				return ant.client.SendPlainText(ctx, msgView, err.Error())
@@ -93,8 +93,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 		case "givemethemoney":
 			assets, _, err := ReadAssets(context.TODO())
 			if err != nil {
-				log.Println("read assets error ", err)
-				return err
+				return ant.client.SendPlainText(ctx, msgView, err.Error())
 			}
 			for symbol, balance := range assets {
 				if symbol == "CNB" {
@@ -109,8 +108,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				}
 				err := bot.CreateTransfer(context.Background(), &in, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 				if err != nil {
-					log.Println("transfer error ", err)
-					return err
+					return ant.client.SendPlainText(ctx, msgView, err.Error())
 				}
 			}
 			return nil
@@ -119,11 +117,11 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 		case "profit":
 			pre, err := ReadAssetsInit(ctx)
 			if err != nil {
-				return err
+				return ant.client.SendPlainText(ctx, msgView, err.Error())
 			}
 			now, prices, err := ReadAssets(ctx)
 			if err != nil {
-				return err
+				return ant.client.SendPlainText(ctx, msgView, err.Error())
 			}
 
 			sum := decimal.Zero
