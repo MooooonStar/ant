@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
@@ -52,6 +53,28 @@ func main() {
 				}
 				log.Println(balance)
 				return nil
+			},
+		},
+		{
+			Name:  "list",
+			Usage: "list orders",
+			Flags: []cli.Flag{cli.StringFlag{Name: "state"}},
+			Action: func(c *cli.Context) error {
+				orders, err := ant.ListOrders(strings.ToUpper(c.String("state")))
+				log.Println(orders)
+				return err
+			},
+		},
+		{
+			Name:  "cancel",
+			Usage: "cancel orders",
+			Action: func(c *cli.Context) error {
+				orders, err := ant.ListOrders("PENDING")
+				if err != nil {
+					return err
+				}
+				log.Println(orders)
+				return ant.NewAnt().CancelOrders(orders)
 			},
 		},
 		{

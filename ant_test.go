@@ -3,8 +3,11 @@ package ant
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"testing"
+	"time"
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -95,4 +98,62 @@ func TestReadAssets(t *testing.T) {
 	data, _, _ := ReadAssets(context.TODO())
 	v, _ := prettyjson.Marshal(data)
 	fmt.Println(string(v))
+}
+
+// a57cc436-0b27-4ddb-82b8-2d6eb02f95f8
+func TestCreateOrder(t *testing.T) {
+	//NewAnt().OceanCancel("a9b7813f-2d7f-30c5-8128-c1bf96b13b1e")
+	trace, err := NewAnt().OceanTrade(PageSideAsk, "1.0", "0.0001", "L", XIN, BTC)
+	if err != nil {
+		panic(err)
+	}
+	log.Println(trace)
+}
+
+func TestRegister(t *testing.T) {
+	key, err := Register(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println(key)
+}
+func TestQueryOrder(t *testing.T) {
+	token, err := Token(ClientId, OceanKey)
+	if err != nil {
+		panic(err)
+	}
+
+	params := map[string]interface{}{
+		"state": "DONE",
+		"order": "DESC",
+		"limit": 20,
+		//"market": XIN + "-" + BTC,
+		"offset": time.Now().UTC().Format(time.RFC3339Nano),
+	}
+	query := "?"
+	for k, v := range params {
+		query += fmt.Sprintf("%v=%v&", k, v)
+	}
+
+	req, err := http.NewRequest("GET", "https://events.ocean.one/orders"+query, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+
+	defer resp.Body.Close()
+	bt, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	v, _ := prettyjson.Format(bt)
+	log.Println(string(v))
 }

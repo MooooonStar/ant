@@ -72,12 +72,21 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				return err
 			}
 			return ant.client.SendPlainText(ctx, msgView, "Goodbye! But I am sure you will come back soon.")
-		case "disable exin":
+		case "disableexin":
 			ant.enableExin = false
 			return ant.client.SendPlainText(ctx, msgView, "exin disabled")
-		case "enable exin":
+		case "enableexin":
 			ant.enableExin = true
-			return ant.client.SendPlainText(ctx, msgView, "exin enabled")
+		case "cancelorders":
+			orders, err := ListOrders("PENDING")
+			if err != nil {
+				return err
+			}
+			if err := ant.CancelOrders(orders); err != nil {
+				return ant.client.SendPlainText(ctx, msgView, err.Error())
+			} else {
+				return ant.client.SendPlainText(ctx, msgView, "cancel success")
+			}
 		case "help", "帮助":
 			return ant.client.SendPlainText(ctx, msgView, "Too young too simple. No help message.")
 		case "profit":
