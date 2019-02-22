@@ -103,7 +103,7 @@ func TestReadAssets(t *testing.T) {
 // a57cc436-0b27-4ddb-82b8-2d6eb02f95f8
 func TestCreateOrder(t *testing.T) {
 	//NewAnt().OceanCancel("a9b7813f-2d7f-30c5-8128-c1bf96b13b1e")
-	trace, err := NewAnt().OceanTrade(PageSideBid, "0.5", "1", "L", XIN, USDT)
+	trace, err := NewAnt().OceanTrade(PageSideAsk, "4", "0.5", "L", EOS, USDT)
 	if err != nil {
 		panic(err)
 	}
@@ -125,9 +125,9 @@ func TestQueryOrder(t *testing.T) {
 	}
 
 	params := map[string]interface{}{
-		"state": "DONE",
+		"state": "PENDING",
 		"order": "DESC",
-		"limit": 20,
+		"limit": 3,
 		//"market": XIN + "-" + BTC,
 		"offset": time.Now().UTC().Format(time.RFC3339Nano),
 	}
