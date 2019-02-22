@@ -71,7 +71,7 @@ func getSettlementId(id, modifier string) string {
 	return uuid.FromBytesOrNil(sum).String()
 }
 
-func Token(userID, key string) (string, error) {
+func OceanToken(userID, key string) (string, error) {
 	oceanKey, err := hex.DecodeString(key)
 	if err != nil {
 		return "", err
@@ -93,7 +93,7 @@ func Token(userID, key string) (string, error) {
 }
 
 func ListOrders(state string) ([]string, error) {
-	token, err := Token(ClientId, OceanKey)
+	token, err := OceanToken(ClientId, OceanKey)
 	if err != nil {
 		return nil, err
 	}

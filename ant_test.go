@@ -119,7 +119,7 @@ func TestRegister(t *testing.T) {
 	log.Println(key)
 }
 func TestQueryOrder(t *testing.T) {
-	token, err := Token(ClientId, OceanKey)
+	token, err := OceanToken(ClientId, OceanKey)
 	if err != nil {
 		panic(err)
 	}
