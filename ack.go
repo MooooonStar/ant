@@ -79,6 +79,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			return ant.client.SendPlainText(ctx, msgView, "exin disabled")
 		case "enableexin":
 			ant.enableExin = true
+			return ant.client.SendPlainText(ctx, msgView, "exin enabled")
 		case "cancelorders":
 			orders, err := ListOrders("PENDING")
 			if err != nil {
@@ -92,6 +93,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 		case "givemethemoney":
 			assets, _, err := ReadAssets(context.TODO())
 			if err != nil {
+				log.Println("read assets error ", err)
 				return err
 			}
 			for symbol, balance := range assets {
@@ -107,6 +109,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				}
 				err := bot.CreateTransfer(context.Background(), &in, ClientId, SessionId, PrivateKey, PinCode, PinToken)
 				if err != nil {
+					log.Println("transfer error ", err)
 					return err
 				}
 			}

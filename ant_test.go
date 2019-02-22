@@ -103,7 +103,7 @@ func TestReadAssets(t *testing.T) {
 // a57cc436-0b27-4ddb-82b8-2d6eb02f95f8
 func TestCreateOrder(t *testing.T) {
 	//NewAnt().OceanCancel("a9b7813f-2d7f-30c5-8128-c1bf96b13b1e")
-	trace, err := NewAnt().OceanTrade(PageSideAsk, "1.0", "0.0001", "L", XIN, BTC)
+	trace, err := NewAnt().OceanTrade(PageSideBid, "0.5", "1", "L", XIN, USDT)
 	if err != nil {
 		panic(err)
 	}
