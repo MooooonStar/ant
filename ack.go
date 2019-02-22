@@ -11,6 +11,8 @@ import (
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
+	number "github.com/MixinNetwork/go-number"
+	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 )
 
@@ -87,6 +89,28 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			} else {
 				return ant.client.SendPlainText(ctx, msgView, "cancel success")
 			}
+		case "givemethemoney":
+			assets, _, err := ReadAssets(context.TODO())
+			if err != nil {
+				return err
+			}
+			for symbol, balance := range assets {
+				if symbol == "CNB" {
+					continue
+				}
+				in := bot.TransferInput{
+					AssetId:     GetAssetId(symbol),
+					RecipientId: MasterID,
+					Amount:      number.FromString(balance),
+					TraceId:     uuid.Must(uuid.NewV4()).String(),
+					Memo:        "long live the bitcoin",
+				}
+				err := bot.CreateTransfer(context.Background(), &in, ClientId, SessionId, PrivateKey, PinCode, PinToken)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		case "help", "帮助":
 			return ant.client.SendPlainText(ctx, msgView, "Too young too simple. No help message.")
 		case "profit":

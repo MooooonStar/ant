@@ -73,7 +73,7 @@ type Ant struct {
 
 func NewAnt() *Ant {
 	return &Ant{
-		enableExin: false,
+		enableExin: true,
 		event:      make(chan *ProfitEvent, 20),
 		snapshots:  make(map[string]bool, 0),
 		orders:     make(map[string]bool, 0),
