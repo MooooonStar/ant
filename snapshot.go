@@ -76,7 +76,6 @@ func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 	}
 
 	for {
-		log.Println("PollMixinNetwork ", checkpoint)
 		snapshots, err := ex.requestMixinNetwork(ctx, checkpoint, limit)
 		if err != nil {
 			log.Println("PollMixinNetwork ERROR", err)
