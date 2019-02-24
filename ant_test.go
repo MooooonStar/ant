@@ -125,7 +125,7 @@ func TestQueryOrder(t *testing.T) {
 	}
 
 	params := map[string]interface{}{
-		"state": "DONE",
+		"state": "PENDING",
 		"order": "DESC",
 		"limit": 6,
 		//"market": XIN + "-" + BTC,
