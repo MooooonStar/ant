@@ -325,6 +325,9 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 }
 
 func (ant *Ant) HandleSnapshot(ctx context.Context, s *Snapshot) error {
+	if len(s.Data) == 0 || s.OpponentId == MasterID {
+		return nil
+	}
 	amount, _ := decimal.NewFromString(s.Amount)
 	matched := &ProfitEvent{}
 	for it := ant.OrderQueue.Iterator(); it.Next(); {

@@ -88,7 +88,7 @@ func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 			}
 			//ex.ensureProcessSnapshot(ctx, s)
 			if err := ex.processSnapshot(ctx, s); err != nil {
-				log.Println("ensureProcessSnapshot", err)
+				log.Println("ProcessSnapshot", err)
 				time.Sleep(100 * time.Millisecond)
 				break
 			}

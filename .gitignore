@@ -5,5 +5,5 @@ demo/demo
 demo/ant
 demo/cat
 
-demo/ant_local
+demo/ant-local
 config.local.go
