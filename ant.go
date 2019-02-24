@@ -245,6 +245,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						event.OtcOrder = otcOrder
 					}
 					ant.orders[event.ExchangeOrder] = true
+					removed = append(removed, event)
 				}
 			}
 			if len(removed) > 0 {
