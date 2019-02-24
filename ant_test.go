@@ -125,9 +125,9 @@ func TestQueryOrder(t *testing.T) {
 	}
 
 	params := map[string]interface{}{
-		"state": "PENDING",
+		"state": "DONE",
 		"order": "DESC",
-		"limit": 3,
+		"limit": 6,
 		//"market": XIN + "-" + BTC,
 		"offset": time.Now().UTC().Format(time.RFC3339Nano),
 	}

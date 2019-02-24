@@ -9,6 +9,7 @@ import (
 	"time"
 
 	bot "github.com/MixinNetwork/bot-api-go-client"
+	"github.com/go-redis/redis"
 )
 
 const (
@@ -59,10 +60,23 @@ func (ex *Ant) requestMixinNetwork(ctx context.Context, checkpoint time.Time, li
 	return resp.Data, nil
 }
 
+const (
+	ant_poll_checkpoint = "ant_poll_checkpoint"
+)
+
 func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 	const limit = 500
+	value, err := Redis(ctx).Get(ant_poll_checkpoint).Result()
+	if err != nil && err != redis.Nil {
+		panic(err)
+	}
 	checkpoint := time.Now().UTC()
+	if len(value) > 0 {
+		checkpoint, _ = time.Parse(time.RFC3339Nano, value)
+	}
+
 	for {
+		log.Println("PollMixinNetwork ", checkpoint)
 		snapshots, err := ex.requestMixinNetwork(ctx, checkpoint, limit)
 		if err != nil {
 			log.Println("PollMixinNetwork ERROR", err)
@@ -73,9 +87,17 @@ func (ex *Ant) PollMixinNetwork(ctx context.Context) {
 			if ex.snapshots[s.SnapshotId] {
 				continue
 			}
-			ex.ensureProcessSnapshot(ctx, s)
+			//ex.ensureProcessSnapshot(ctx, s)
+			if err := ex.processSnapshot(ctx, s); err != nil {
+				log.Println("ensureProcessSnapshot", err)
+				time.Sleep(100 * time.Millisecond)
+				break
+			}
+
 			checkpoint = s.CreatedAt
 			ex.snapshots[s.SnapshotId] = true
+
+			Redis(ctx).Set(ant_poll_checkpoint, checkpoint.Format(time.RFC3339Nano), 0)
 		}
 		if len(snapshots) < limit {
 			time.Sleep(PollInterval)
@@ -99,12 +121,12 @@ func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
 		return nil
 	}
 
-	if err := ex.HandleSnapshot(ctx, s); err != nil {
-		log.Println(err)
+	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
 		return err
 	}
 
-	if err := Database(ctx).FirstOrCreate(s).Error; err != nil {
+	if err := ex.HandleSnapshot(ctx, s); err != nil {
+		log.Println(err)
 		return err
 	}
 
