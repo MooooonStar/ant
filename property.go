@@ -16,11 +16,11 @@ func ReadAssetsInit(ctx context.Context) (map[string]string, error) {
 	}
 
 	var s Snapshot
-	if err := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND amount <  0", MasterID).Order("created_at DESC").First(&s).Error; err != nil {
+	if err := Database(ctx).Model(&Snapshot{}).Where("user_id = ? AND opponent_id = ? AND amount <  0", ClientId, MasterID).Order("created_at DESC").First(&s).Error; err != nil {
 		return nil, err
 	}
 
-	db := Database(ctx).Model(&Snapshot{}).Where("opponent_id = ? AND created_at > ?", MasterID, s.CreatedAt).
+	db := Database(ctx).Model(&Snapshot{}).Where("user_id = ? AND opponent_id = ? AND created_at > ?", ClientId, MasterID, s.CreatedAt).
 		Select("asset_id AS asset,sum(amount) AS amount").Group("asset").Scan(&wallets)
 	if db.Error != nil {
 		return nil, db.Error

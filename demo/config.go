@@ -4,9 +4,9 @@ package main
 
 const (
 	DBHost       = "localhost:3306"
-	DBName       = "test"
+	DBName       = "oceanone"
 	DBUsername   = "root"
 	DBPassword   = ""
 	RedisAddress = "localhost:6379"
-	RedisDB      = 1
+	RedisDB      = 0
 )
