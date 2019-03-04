@@ -212,7 +212,7 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 					}
 				}
 				//每笔订单都会取消，这里留3s接收取消订单请求发出后仍成交的钱款。
-				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3 * time.Second).Before(time.Now()) {
+				if event.CreatedAt.Add(time.Duration(event.Expire)).Add(3*time.Second).Before(time.Now()) && len(event.OtcOrder) == 0 {
 					amount := event.BaseAmount
 					send, side := event.Base, PageSideAsk
 					if !amount.IsPositive() {
@@ -234,18 +234,17 @@ func (ant *Ant) OnExpire(ctx context.Context) error {
 						limited = LimitAmount(amount, balance, event.Min.Mul(event.Price), event.Max.Mul(event.Price))
 					}
 
+					otcOrder := UuidWithString(event.ID + ExinCore)
 					if !limited.IsPositive() || !ant.enableExin {
 						log.Printf("%s, balance: %v, min: %v, send: %v,amount: %v, limited: %v, enable: %v", Who(send), balance, event.Min, send, amount, limited, ant.enableExin)
 					} else {
-						otcOrder := UuidWithString(event.ID + ExinCore)
 						if _, err := ant.ExinTrade(side, limited.String(), event.Base, event.Quote, otcOrder); err != nil {
 							log.Println(err)
 							continue
 						}
-						event.OtcOrder = otcOrder
 					}
+					event.OtcOrder = otcOrder
 					ant.orders[event.ExchangeOrder] = true
-					removed = append(removed, event)
 				}
 			}
 			if len(removed) > 0 {
