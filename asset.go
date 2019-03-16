@@ -20,6 +20,7 @@ const (
 	USDT  = "815b0b1a-2764-3736-8faa-42d694fa620a"
 	PRS   = "3edb734c-6d6f-32ff-ab03-4eb43640c758"
 	IQ    = "336d5d97-329c-330d-8e62-2b7c9ba40ea0"
+	KU16  = "8b4d8b7d-175b-36f8-867d-7e3cd760fa5b"
 )
 
 var symbolAssetId = map[string]string{

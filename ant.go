@@ -283,8 +283,8 @@ func (ant *Ant) CleanUpTheMess(ctx context.Context) error {
 			return ctx.Err()
 
 		case <-ticker.C:
-			//价格可能波动，只处理最近10min的订单
-			to, from := time.Now(), time.Now().Add(-10*time.Minute)
+			//价格可能波动，只处理最近30min的订单
+			to, from := time.Now(), time.Now().Add(-30*time.Minute)
 			if err := Database(ctx).Model(&ProfitEvent{}).Where("created_at > ? AND created_at <  ? AND status = ?", from, to, StatusFailed).
 				Select("base, quote, SUM(base_amount) AS base_amount, SUM(quote_amount) AS quote_amount").
 				Group("base, quote").Scan(&mess).Error; err != nil {

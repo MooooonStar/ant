@@ -149,7 +149,7 @@ func (ant *Ant) OceanCancel(trace string) error {
 	}
 	cancelTrace := uuid.Must(uuid.NewV4()).String()
 	return ant.CreateTransfer(context.TODO(), &bot.TransferInput{
-		AssetId:     CNB,
+		AssetId:     KU16,
 		RecipientId: RandomBrokerId(),
 		Amount:      number.FromFloat(0.00000001),
 		TraceId:     cancelTrace,
