@@ -43,6 +43,7 @@ var symbolAssetId = map[string]string{
 	"USDT":  USDT,
 	"PRS":   PRS,
 	"IQ":    IQ,
+	"KU16":  KU16,
 }
 
 func GetAssetId(symbol string) string {

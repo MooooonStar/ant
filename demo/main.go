@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 	"sort"
 	"strings"
 	"time"
@@ -38,9 +37,6 @@ var watchingList = []Pair{
 }
 
 func main() {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
 		{
@@ -90,7 +86,7 @@ func main() {
 					return err
 				}
 				for symbol, balance := range assets {
-					if symbol == "CNB" {
+					if symbol == "KU16" {
 						continue
 					}
 					in := bot.TransferInput{
@@ -135,7 +131,7 @@ func main() {
 					PoolSize:     1024,
 				})
 
-				ctx, cancel := context.WithCancel(context.Background())
+				ctx := context.Background()
 				ctx = ant.SetDB(ctx, db)
 				ctx = ant.SetupRedis(ctx, redisClient)
 
@@ -152,16 +148,9 @@ func main() {
 					go bot.Watching(ctx, base, quote)
 					go bot.Fishing(ctx, base, quote)
 				}
-				go bot.Trade(ctx)
 				go bot.CleanUpTheMess(ctx)
-
-				//ctrl-c 退出时先取消订单
-				select {
-				case <-sig:
-					cancel()
-					bot.Clean()
-					return nil
-				}
+				bot.Trade(ctx)
+				return nil
 			},
 		},
 	}

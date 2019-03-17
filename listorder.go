@@ -47,7 +47,7 @@ func Register(ctx context.Context) (string, error) {
 	}
 
 	input := &bot.TransferInput{
-		AssetId:     CNB,
+		AssetId:     KU16,
 		RecipientId: RandomBrokerId(),
 		Amount:      number.FromString("0.00000001"),
 		TraceId:     getSettlementId(ClientId, "USER|SIG|REGISTER"),

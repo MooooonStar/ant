@@ -96,7 +96,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 				return ant.client.SendPlainText(ctx, msgView, err.Error())
 			}
 			for symbol, balance := range assets {
-				if symbol == "CNB" {
+				if symbol == "KU16" {
 					continue
 				}
 				in := bot.TransferInput{
@@ -127,7 +127,7 @@ func (ant *Ant) OnMessage(ctx context.Context, msgView bot.MessageView, userId s
 			sum := decimal.Zero
 			s := fmt.Sprintf("%5s:%8v%8v%8v\n", "Symbol", "Before", "Now", "Delta")
 			for symbol, amount := range pre {
-				if symbol == "CNB" {
+				if symbol == "KU16" {
 					continue
 				}
 				a, _ := decimal.NewFromString(amount)

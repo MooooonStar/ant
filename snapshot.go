@@ -116,7 +116,7 @@ func (ex *Ant) ensureProcessSnapshot(ctx context.Context, s *Snapshot) {
 }
 
 func (ex *Ant) processSnapshot(ctx context.Context, s *Snapshot) error {
-	if len(s.OpponentId) == 0 || s.Asset.AssetId == CNB {
+	if len(s.OpponentId) == 0 || s.Asset.AssetId == KU16 || s.Asset.AssetId == CNB {
 		return nil
 	}
 
