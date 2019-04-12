@@ -11,7 +11,6 @@ import (
 
 	prettyjson "github.com/hokaccha/go-prettyjson"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
@@ -70,15 +69,16 @@ func TestUUIDl(t *testing.T) {
 }
 
 func TestOrderMemo(t *testing.T) {
-	match := "hKFBsAAAAAAAAAAAAAAAAAAAAAChQrAAAAAAAAAAAAAAAAAAAAAAoU+wI1JmpPASO+27lBlPgcN5ZaFTpkNBTkNFTA=="
-	var reply OceanReply
+	match := "haFNsP3hkio7Rl/mpCzSHl8tOu+hU6FBoVClNTAwMDChVKFMoUGwgVsLGidkNzaPqkLWlPpiCg=="
+	var reply OceanOrder
 	reply.Unpack(match)
-	fmt.Println(reply.A, reply.B, reply.O, reply.S)
+	v, _ := prettyjson.Marshal(reply)
+	log.Println(string(v))
 
-	order := OceanOrder{
-		O: uuid.FromStringOrNil("235266a4-f012-3bed-bb94-194f81c37965"),
-	}
-	fmt.Println(order.Pack())
+	// order := OceanOrder{
+	// 	O: uuid.FromStringOrNil("235266a4-f012-3bed-bb94-194f81c37965"),
+	// }
+	// fmt.Println(order.Pack())
 
 	// var r ExinReply
 	// r.Unpack("g6FDzQPsoVShRqFPxBA+z+cTxh4+lJdmI5/wKyEu")

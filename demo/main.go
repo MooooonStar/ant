@@ -107,10 +107,6 @@ func main() {
 		{
 			Name:  "run",
 			Usage: "find profits between different exchanges",
-			Flags: []cli.Flag{
-				cli.BoolFlag{Name: "ocean"},
-				cli.BoolFlag{Name: "exin"},
-			},
 			Action: func(c *cli.Context) error {
 				conf := fmt.Sprintf("%s:%s@%s(%s)/%s?parseTime=True&charset=utf8mb4",
 					DBUsername, DBPassword, "tcp", DBHost, DBName)

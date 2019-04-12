@@ -40,6 +40,7 @@ type OceanOrder struct {
 	P string    // price
 	T string    // type
 	O uuid.UUID // order
+	M uuid.UUID //
 }
 
 func (action *OceanOrder) Pack() string {
